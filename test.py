@@ -12,3 +12,7 @@ message = client.messages.create(
 
 print(message.content[0].text)
 print("\nstop_reason:", message.stop_reason)
+print("\n--- Token Usage ---")
+print("Input tokens: ", message.usage.input_tokens)
+print("Output tokens:", message.usage.output_tokens)
+print("Total tokens: ", message.usage.input_tokens + message.usage.output_tokens)
