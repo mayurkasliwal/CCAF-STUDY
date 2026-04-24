@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CCAF Study Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0c0c0f;
+  --surface: #131318;
+  --surface2: #1a1a22;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --accent: #7c6dfa;
+  --accent2: #a78bfa;
+  --accent-dim: rgba(124,109,250,0.12);
+  --teal: #2dd4bf;
+  --teal-dim: rgba(45,212,191,0.1);
+  --amber: #f59e0b;
+  --amber-dim: rgba(245,158,11,0.1);
+  --coral: #f87171;
+  --coral-dim: rgba(248,113,113,0.1);
+  --green: #4ade80;
+  --green-dim: rgba(74,222,128,0.1);
+  --blue: #60a5fa;
+  --blue-dim: rgba(96,165,250,0.1);
+  --text: #e8e8f0;
+  --text2: #9999b0;
+  --text3: #55556a;
+  --radius: 10px;
+  --radius-lg: 16px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ── GRID NOISE BACKGROUND ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.012'%3E%3Crect x='0' y='0' width='1' height='40'/%3E%3Crect x='0' y='0' width='40' height='1'/%3E%3C/g%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+.wrap { position: relative; z-index: 1; max-width: 960px; margin: 0 auto; padding: 0 20px 80px; }
+
+/* ── HEADER ── */
+.site-header {
+  padding: 40px 0 32px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 32px;
+}
+.header-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.header-eyebrow {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--accent2);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.header-title {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(22px, 4vw, 32px);
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.2;
+  margin-bottom: 6px;
+}
+.header-sub { font-size: 13px; color: var(--text2); }
+.exam-chip {
+  background: var(--accent-dim);
+  border: 1px solid rgba(124,109,250,0.25);
+  border-radius: 8px;
+  padding: 10px 16px;
+  text-align: right;
+}
+.exam-chip .date { font-family: 'DM Mono', monospace; font-size: 18px; font-weight: 500; color: var(--accent2); }
+.exam-chip .label { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+/* ── STATS ROW ── */
+.stats-row { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin-bottom: 24px; }
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.stat-label { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 6px; }
+.stat-val { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 700; color: #fff; }
+.stat-val.accent { color: var(--accent2); }
+.stat-val.teal { color: var(--teal); }
+.stat-val.amber { color: var(--amber); }
+
+/* ── MASTER PROGRESS ── */
+.master-prog-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-bottom: 24px;
+}
+.prog-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.prog-title { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .07em; }
+.prog-pct { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--accent2); }
+.track { height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; position: relative; }
+.fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent) 0%, var(--accent2) 100%); transition: width .4s cubic-bezier(.4,0,.2,1); }
+
+/* ── DOMAIN PILLS ── */
+.domain-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
+.domain-pill {
+  display: flex; align-items: center; gap: 7px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid;
+  font-family: 'DM Mono', monospace;
+}
+.pill-d1 { background: var(--accent-dim); border-color: rgba(124,109,250,0.2); color: var(--accent2); }
+.pill-d2 { background: var(--teal-dim); border-color: rgba(45,212,191,0.2); color: var(--teal); }
+.pill-d3 { background: var(--amber-dim); border-color: rgba(245,158,11,0.2); color: var(--amber); }
+.pill-d4 { background: var(--coral-dim); border-color: rgba(248,113,113,0.2); color: var(--coral); }
+.pill-d5 { background: var(--blue-dim); border-color: rgba(96,165,250,0.2); color: var(--blue); }
+.pill-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+/* ── WEEK TABS ── */
+.week-tabs { display: flex; gap: 4px; margin-bottom: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; }
+.week-btn {
+  flex: 1; padding: 8px 10px; border-radius: 8px;
+  font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500;
+  color: var(--text3); background: none; border: none; cursor: pointer;
+  transition: all .2s; text-align: center; line-height: 1.4;
+}
+.week-btn:hover { color: var(--text2); background: var(--surface2); }
+.week-btn.active { background: var(--accent-dim); color: var(--accent2); border: 1px solid rgba(124,109,250,0.2); }
+
+/* ── WEEK PANE ── */
+.week-pane { display: none; }
+.week-pane.active { display: block; }
+.week-header {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+  margin-bottom: 16px;
+}
+.week-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.week-badge {
+  font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 500;
+  padding: 3px 10px; border-radius: 20px;
+  background: var(--accent-dim); color: var(--accent2);
+  border: 1px solid rgba(124,109,250,0.2);
+}
+.week-name { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 600; color: #fff; }
+.week-desc { font-size: 12px; color: var(--text2); margin-bottom: 12px; }
+.week-prog-row { display: flex; align-items: center; gap: 10px; }
+.week-prog-track { flex: 1; height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
+.week-prog-fill { height: 100%; border-radius: 2px; background: var(--accent); transition: width .4s; }
+.week-pct-label { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent2); min-width: 36px; text-align: right; }
+
+/* ── SECTION HEAD ── */
+.section-head {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  color: var(--text3); text-transform: uppercase; letter-spacing: .1em;
+  padding: 16px 0 6px; display: flex; align-items: center; gap: 10px;
+}
+.section-head::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* ── DAY BLOCK ── */
+.day-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+  overflow: hidden;
+  transition: border-color .2s;
+}
+.day-block:hover { border-color: var(--border2); }
+.day-top {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; cursor: pointer; user-select: none;
+}
+.day-date {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  color: var(--text3); min-width: 54px; flex-shrink: 0;
+}
+.day-name { font-size: 13px; font-weight: 500; flex: 1; color: var(--text); }
+.day-progress { display: flex; align-items: center; gap: 8px; }
+.day-mini-bar { width: 60px; height: 3px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
+.day-mini-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .3s; }
+.day-pct-txt { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text3); min-width: 30px; text-align: right; }
+.chevron { font-size: 9px; color: var(--text3); transition: transform .2s; margin-left: 4px; }
+.chevron.open { transform: rotate(90deg); }
+
+/* ── DAY ITEMS ── */
+.day-items { padding: 0 16px 12px; display: none; }
+.day-items.open { display: block; }
+
+.check-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.check-row:last-child { border-bottom: none; }
+
+.check-row input[type=checkbox] {
+  width: 16px; height: 16px; margin-top: 2px;
+  accent-color: var(--accent); cursor: pointer; flex-shrink: 0;
+}
+
+.check-label {
+  font-size: 12px; color: var(--text2); line-height: 1.55; flex: 1; cursor: pointer;
+  transition: color .15s;
+}
+.check-label.done { text-decoration: line-through; color: var(--text3); }
+.check-label a { color: var(--accent2); text-decoration: none; font-family: 'DM Mono', monospace; font-size: 11px; }
+.check-label a:hover { text-decoration: underline; }
+
+/* ── TAGS ── */
+.tag {
+  display: inline-block; font-family: 'DM Mono', monospace;
+  font-size: 9px; font-weight: 500;
+  padding: 2px 7px; border-radius: 6px; margin-right: 6px; flex-shrink: 0;
+  text-transform: uppercase; letter-spacing: .04em;
+}
+.tag-d1 { background: var(--accent-dim); color: var(--accent2); border: 1px solid rgba(124,109,250,0.2); }
+.tag-d2 { background: var(--teal-dim); color: var(--teal); border: 1px solid rgba(45,212,191,0.2); }
+.tag-d3 { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(245,158,11,0.2); }
+.tag-d4 { background: var(--coral-dim); color: var(--coral); border: 1px solid rgba(248,113,113,0.2); }
+.tag-d5 { background: var(--blue-dim); color: var(--blue); border: 1px solid rgba(96,165,250,0.2); }
+.tag-repo { background: var(--green-dim); color: var(--green); border: 1px solid rgba(74,222,128,0.2); }
+.tag-course { background: rgba(251,191,36,0.1); color: #fbbf24; border: 1px solid rgba(251,191,36,0.2); }
+.tag-exam { background: rgba(248,113,113,0.1); color: var(--coral); border: 1px solid rgba(248,113,113,0.2); }
+
+/* ── REPOS SECTION ── */
+.repos-section {
+  margin-top: 40px;
+  border-top: 1px solid var(--border);
+  padding-top: 32px;
+}
+.repos-title {
+  font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700;
+  color: #fff; margin-bottom: 6px;
+}
+.repos-sub { font-size: 13px; color: var(--text2); margin-bottom: 24px; }
+
+.repos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+
+.repo-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  transition: border-color .2s, transform .15s;
+  cursor: default;
+}
+.repo-card:hover { border-color: var(--border2); transform: translateY(-1px); }
+.repo-card.done-card { border-color: rgba(74,222,128,0.2); }
+
+.repo-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.repo-name { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: var(--accent2); }
+.repo-tier {
+  font-family: 'DM Mono', monospace; font-size: 9px; padding: 2px 7px;
+  border-radius: 5px; flex-shrink: 0;
+}
+.tier-1 { background: var(--accent-dim); color: var(--accent2); border: 1px solid rgba(124,109,250,0.2); }
+.tier-2 { background: var(--teal-dim); color: var(--teal); border: 1px solid rgba(45,212,191,0.2); }
+
+.repo-desc { font-size: 12px; color: var(--text2); margin-bottom: 12px; line-height: 1.5; }
+.repo-domain-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 12px; }
+.repo-link {
+  display: inline-block; font-family: 'DM Mono', monospace; font-size: 10px;
+  color: var(--accent); text-decoration: none; margin-bottom: 12px;
+}
+.repo-link:hover { text-decoration: underline; color: var(--accent2); }
+
+.repo-check-row { display: flex; align-items: center; gap: 8px; padding-top: 10px; border-top: 1px solid var(--border); }
+.repo-check-row input[type=checkbox] { accent-color: var(--green); width: 15px; height: 15px; cursor: pointer; }
+.repo-check-label { font-size: 11px; color: var(--text3); cursor: pointer; }
+.repo-done-badge {
+  display: none; font-family: 'DM Mono', monospace; font-size: 9px;
+  color: var(--green); background: var(--green-dim);
+  border: 1px solid rgba(74,222,128,0.2); padding: 2px 8px; border-radius: 5px;
+}
+.repo-card.done-card .repo-done-badge { display: inline-block; }
+
+/* ── ANTI-PATTERN BOX ── */
+.ap-box {
+  margin-top: 8px;
+  border-left: 2px solid rgba(248,113,113,0.4);
+  padding: 8px 12px;
+  background: rgba(248,113,113,0.04);
+  border-radius: 0 8px 8px 0;
+}
+.ap-wrong { font-size: 11px; color: var(--coral); margin-bottom: 3px; font-weight: 500; }
+.ap-right { font-size: 11px; color: var(--teal); }
+
+/* ── FOOTER ── */
+.footer { text-align: center; padding: 32px 0 0; border-top: 1px solid var(--border); margin-top: 48px; }
+.footer p { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 600px) {
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .week-tabs { flex-wrap: wrap; }
+  .week-btn { font-size: 10px; padding: 7px 6px; }
+  .repos-grid { grid-template-columns: 1fr; }
+  .header-top { flex-direction: column; }
+  .exam-chip { text-align: left; }
+}
+
+/* ── COMPLETION BURST ── */
+@keyframes pop { 0%{transform:scale(1)} 50%{transform:scale(1.05)} 100%{transform:scale(1)} }
+.just-done { animation: pop .3s ease-out; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- HEADER -->
+<header class="site-header">
+  <div class="header-top">
+    <div>
+      <div class="header-eyebrow">Certification Study Tracker</div>
+      <div class="header-title">Claude Certified Architect<br>Foundations (CCAF)</div>
+      <div class="header-sub">60 questions · 120 min · Pass: 720/1000 scaled score</div>
+    </div>
+    <div class="exam-chip">
+      <div class="date">Apr 18, 2026</div>
+      <div class="label">Target exam date</div>
+      <div style="font-family:'DM Mono',monospace;font-size:13px;color:var(--amber);margin-top:6px" id="days-chip">— days left</div>
+    </div>
+  </div>
+</header>
+
+<!-- STATS -->
+<div class="stats-row">
+  <div class="stat-card"><div class="stat-label">Total Tasks</div><div class="stat-val" id="s-total">0</div></div>
+  <div class="stat-card"><div class="stat-label">Completed</div><div class="stat-val accent" id="s-done">0</div></div>
+  <div class="stat-card"><div class="stat-label">Repos Cloned</div><div class="stat-val teal" id="s-repos">0</div></div>
+  <div class="stat-card"><div class="stat-label">Progress</div><div class="stat-val amber" id="s-pct">0%</div></div>
+</div>
+
+<!-- MASTER PROGRESS -->
+<div class="master-prog-wrap">
+  <div class="prog-header">
+    <span class="prog-title">Overall completion</span>
+    <span class="prog-pct" id="m-pct-label">0 / 0</span>
+  </div>
+  <div class="track"><div class="fill" id="m-fill" style="width:0%"></div></div>
+</div>
+
+<!-- DOMAIN PILLS -->
+<div class="domain-row">
+  <div class="domain-pill pill-d1"><span class="pill-dot"></span>D1 Agentic Architecture 27%</div>
+  <div class="domain-pill pill-d2"><span class="pill-dot"></span>D2 Tool Design & MCP 18%</div>
+  <div class="domain-pill pill-d3"><span class="pill-dot"></span>D3 Claude Code Config 20%</div>
+  <div class="domain-pill pill-d4"><span class="pill-dot"></span>D4 Prompt Eng & Output 20%</div>
+  <div class="domain-pill pill-d5"><span class="pill-dot"></span>D5 Context & Reliability 15%</div>
+</div>
+
+<!-- WEEK TABS -->
+<div class="week-tabs">
+  <button class="week-btn active" onclick="showWeek(0)">Week 1<br><span style="font-size:9px;opacity:.7">Mar 21–27</span></button>
+  <button class="week-btn" onclick="showWeek(1)">Week 2<br><span style="font-size:9px;opacity:.7">Mar 28–Apr 3</span></button>
+  <button class="week-btn" onclick="showWeek(2)">Week 3<br><span style="font-size:9px;opacity:.7">Apr 4–10</span></button>
+  <button class="week-btn" onclick="showWeek(3)">Week 4<br><span style="font-size:9px;opacity:.7">Apr 11–18</span></button>
+</div>
+
+<!-- ═══════ WEEK 1 ═══════ -->
+<div class="week-pane active" id="pane-0">
+  <div class="week-header">
+    <div class="week-meta"><span class="week-badge">Week 1 · Mar 21–27</span></div>
+    <div class="week-name">API Core, Prompt Engineering & Claude Code Basics</div>
+    <div class="week-desc">Domains D3 + D4 · 40% of exam · Build mental models before touching agents</div>
+    <div class="week-prog-row">
+      <div class="week-prog-track"><div class="week-prog-fill" id="wf0" style="width:0%"></div></div>
+      <div class="week-pct-label" id="wp0">0%</div>
+    </div>
+  </div>
+
+  <div class="section-head">Day 1 — Mar 21 · Setup & API Fundamentals</div>
+  <div class="day-block" id="day0">
+    <div class="day-top" onclick="toggleDay('day0')">
+      <span class="day-date">Mar 21</span>
+      <span class="day-name">Environment setup + Messages API</span>
+      <div class="day-progress"><div class="day-mini-bar"><div class="day-mini-fill" id="df-day0" style="width:0%"></div></div><span class="day-pct-txt" id="dp-day0">0%</span></div>
+      <span class="chevron" id="ch-day0">&#9654;</span>
+    </div>
+    <div class="day-items" id="di-day0">
+      <div class="check-row"><input type="checkbox" id="t0" onchange="tick()"><label class="check-label" for="t0"><span class="tag tag-course">Course</span>Anthropic Academy — Claude 101 (free, ~1hr) · <a href="https://anthropic.skilljar.com/claude-101" target="_blank">anthropic.skilljar.com/claude-101</a></label></div>
+      <div class="check-row"><input type="checkbox" id="t1" onchange="tick()"><label class="check-label" for="t1"><span class="tag tag-d4">D4</span>Read Messages API docs — system prompts, max_tokens, stop_reason values · <a href="https://docs.anthropic.com/en/api/messages" target="_blank">docs.anthropic.com</a></label></div>
+      <div class="check-row"><input type="checkbox" id="t2" onchange="tick()"><label class="check-label" for="t2"><span class="tag tag-d4">D4</span>Install SDK: <code>pip install anthropic</code>, set ANTHROPIC_API_KEY, run first raw API call</label></div>
+      <div class="check-row"><input type="checkbox" id="t3" onchange="tick()"><label class="check-label" for="t3"><span class="tag tag-d2">D2</span>Study tool_choice: "auto" / "any" / forced {"type":"tool","name":"..."} — write one working example of each</label></div>
+    </div>
+  </div>
+
+  <div class="section-head">Day 2 — Mar 22 · Tool Use & JSON Schema</div>
+  <div class="day-block" id="day1">
+    <div class="day-top" onclick="toggleDay('day1')">
+      <span class="day-date">Mar 22</span>
+      <span class="day-name">Tool use deep dive + JSON schema design</span>
+      <div class="day-progress"><div class="day-mini-bar"><div class="day-mini-fill" id="df-day1" style="width:0%"></div></div><span class="day-pct-txt" id="dp-day1">0%</span></div>
+      <span class="chevron" id="ch-day1">&#9654;</span>
+    </div>
+    <div class="day-items" id="di-day1">
+      <div class="check-row"><input type="checkbox" id="t4" onchange="tick()"><label class="check-label" for="t4"><span class="tag tag-course">Course</span>Anthropic Academy — Building with the Claude API (modules 1–3) · <a href="https://anthropic.skilljar.com/claude-with-the-anthropic-api" target="_blank">anthropic.skilljar.com</a></label></div>
+      <div class="check-row"><input type="checkbox" id="t5" onchange="tick()"><label class="check-label" for="t5"><span class="tag tag-d4">D4</span>Read Tool use guide — define tool with JSON schema, required vs optional vs nullable fields · <a href="https://docs.anthropic.com/en/docs/tool-use" target="_blank">docs.anthropic.com</a></label></div>
+      <div class="check-row"><input type="checkbox" id="t6" onchange="tick()"><label class="check-label" for="t6"><span class="tag tag-repo">Repo</span>Clone anthropic-cookbook, open <code>tool_use/customer_service_agent.ipynb</code>, run it · <a href="https://github.com/anthropics/anthropic-cookbook" target="_blank">github.com/anthropics/anthropic-cookbook</a></label></div>
+      <div class="check-row"><input type="checkbox" id="t7" onchange="tick()"><label class="check-label" for="t7"><span class="tag tag-d4">D4</span>Build: extraction tool with JSON schema including enum+"other"+detail field and nullable optional fields</label></div>
+    </div>
+  </div>
+
+  <div class="section-head">Day 3 — Mar 23 · Prompt Engineering Techniques</div>
+  <div class="day-block" id="day2">
+    <div class="day-top" onclick="toggleDay('day2')">
+      <span class="day-date">Mar 23</span>
+      <span class="day-name">Few-shot prompting + validation-retry loops</span>
+      <div class="day-progress"><div class="day-mini-bar"><div class="day-mini-fill" id="df-day2" style="width:0%"></div></div><span class="day-pct-txt" id="dp-day2">0%</span></div>
+      <span class="chevron" id="ch-day2">&#9654;</span>
+    </div>
+    <div class="day-items" id="di-day2">
+      <div class="check-row"><input type="checkbox" id="t8" onchange="tick()"><label class="check-label" for="t8"><span class="tag tag-d4">D4</span>Read Prompt engineering overview — few-shot, explicit criteria, multi-instance review · <a href="https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview" target="_blank">docs.anthropic.com</a></label></div>
+      <div class="check-row"><input type="checkbox" id="t9" onchange="tick()"><label class="check-label" for="t9"><span class="tag tag-d4">D4</span>Build: 2–4 few-shot examples for ambiguous tool selection showing reasoning for choice A over B</label></div>
+      <div class="check-row"><input type="checkbox" id="t10" onchange="tick()"><label class="check-label" for="t10"><span class="tag tag-d4">D4</span>Build: validation-retry loop — on schema fail, append original doc + failed extraction + specific error to next prompt</label></div>
+      <div class="check-row"><input type="checkbox" id="t11" onchange="tick()"><label class="check-label" for="t11"><span class="tag tag-course">Course</span>Anthropic Academy — Building with the Claude API (modules 4–6)</label></div>
+    </div>
+  </div>
+
+  <div class="section-head">Day 4 — Mar 24 · Claude Code Setup & CLAUDE.md Hierarchy</div>
+  <div class="day-block" id="day3">
+    <div class="day-top" onclick="toggleDay('day3')">
+      <span class="day-date">Mar 24</span>
+      <span class="day-name">Claude Code install + 3-tier CLAUDE.md config</span>
+      <div class="day-progress"><div class="day-mini-bar"><div class="day-mini-fill" id="df-day3" style="width:0%"></div></div><span class="day-pct-txt" id="dp-day3">0%</span></div>
+      <span class="chevron" id="ch-day3">&#9654;</span>
+    </div>
+    <div class="day-items" id="di-day3">
+      <div class="check-row"><input type="checkbox" id="t12" onchange="tick()"><label class="check-label" for="t12"><span class="tag tag-course">Course</span>Anthropic Academy — Claude Code in Action (all modules) · <a href="https://anthropic.skilljar.com/claude-code-in-action" target="_blank">anthropic.skilljar.com</a></label></div>
+      <div class="check-row"><input type="checkbox" id="t13" onchange="tick()"><label class="check-label" for="t13"><span class="tag tag-d3">D3</span>Install Claude Code, run <code>claude --version</code>, test <code>claude -p "hello"</code> (non-interactive mode)</label></div>
+      <div class="check-row"><input type="checkbox" id="t14" onchange="tick()"><label class="check-label" for="t14"><span class="tag tag-d3">D3</span>Create all 3 CLAUDE.md tiers: <code>~/.claude/CLAUDE.md</code> (user), project-root, subdirectory</label></div>
+      <div class="check-row"><input type="checkbox" id="t15" onchange="tick()"><label class="check-label" for="t15"><span class="tag tag-d3">D3</span>Test @import syntax — verify user-level instructions do NOT travel via version control to teammates</label></div>
+      <div class="check-row"><input type="checkbox" id="t16" onchange="tick()"><label class="check-label" for="t16"><span class="tag tag-d3">D3</span>Run /memory command — verify which memory files load and diagnose any missing configs</label></div>
+    </div>
+  </div>
+
+  <div class="section-head">Day 5 — Mar 25 · Path Rules, Slash Commands & Skills</div>
+  <div class="day-block" id="day4">
+    <div class="day-top" onclick="toggleDay('day4')">
+      <span class="day-date">Mar 25</span>
+      <span class="day-name">.claude/rules/ glob patterns + custom commands + skills</span>
+      <div class="day-progress"><div class="day-mini-bar"><div class="day-mini-fill" id="df-day4" style="width:0%"></div></div><span class="day-pct-txt" id="dp-day4">0%</span></div>
+      <span class="chevron" id="ch-day4">&#9654;</span>
+    </div>
+    <div class="day-items" id="di-day4">
+      <div class="check-row"><input type="checkbox" id="t17" onchange="tick()"><label class="check-label" for="t17"><span class="tag tag-d3">D3</span>Create <code>.claude/rules/testing.md</code> with YAML <code>paths: ["**/*.test.tsx"]</code> — test loads only on matching files</label></div>
+      <div class="check-row"><input type="checkbox" id="t18" onchange="tick()"><label class="check-label" for="t18"><span class="tag tag-d3">D3</span>Create project slash command <code>.claude/commands/review.md</code> AND personal <code>~/.claude/commands/</code> — know the difference</label></div>
+      <div class="check-row"><input type="checkbox" id="t19" onchange="tick()"><label class="check-label" for="t19"><span class="tag tag-repo">Repo</span>Clone anthropics/skills — read every SKILL.md frontmatter: context:fork, allowed-tools, argument-hint · <a href="https://github.com/anthropics/skills" target="_blank">github.com/anthropics/skills</a></label></div>
+      <div class="check-row"><input type="checkbox" id="t20" onchange="tick()"><label class="check-label" for="t20"><span class="tag tag-d3">D3</span>Build a skill with <code>context: fork</code> — confirm it doesn't pollute main conversation context</label></div>
+    </div>
+  </div>
+
+  <div class="section-head">Day 6 — Mar 26 · Batch API + Multi-pass Reviews</div>
+  <div class="day-block" id="day5">
+    <div class="day-top" onclick="toggleDay('day5')">
+      <span class="day-date">Mar 26</span>
+      <span class="day-name">Message Batches API + multi-instance review architecture</span>
+      <div class="day-progress"><div class="day-mini-bar"><div class="day-mini-fill" id="df-day5" style="width:0%"></div></div><span class="day-pct-txt" id="dp-day5">0%</span></div>
+      <span class="chevron" id="ch-day5">&#9654;</span>
+    </div>
+    <div class="day-items" id="di-day5">
+      <div class="check-row"><input type="checkbox" id="t21" onchange="tick()"><label class="check-label" for="t21"><span class="tag tag-d4">D4</span>Read Message Batches API — 50% cost, 24hr window, custom_id, no multi-turn tool calls · <a href="https://docs.anthropic.com/en/docs/build-with-claude/message-batches" target="_blank">docs.anthropic.com</a></label></div>
+      <div class="check-row"><input type="checkbox" id="t22" onchange="tick()"><label class="check-label" for="t22"><span class="tag tag-d4">D4</span>Build: submit 10 docs via Batch API with custom_id, poll for results, resubmit failed items by custom_id</label></div>
+      <div class="check-row"><input type="checkbox" id="t23" onchange="tick()"><label class="check-label" for="t23"><span class="tag tag-d4">D4</span>Memorize: Batch API = overnight/weekly jobs only. Pre-merge checks MUST use synchronous API (no latency SLA in batch)</label></div>
+      <div class="check-row"><input type="checkbox" id="t24" onchange="tick()"><label class="check-label" for="t24"><span class="tag tag-d4">D4</span>Study: independent review instance — second Claude instance reviews code WITHOUT generator's reasoning context</label></div>
+    </div>
+  </div>
+
+  <div class="section-head">Day 7 — Mar 27 · Week 1 Hands-on Exercise</div>
+  <div class="day-block" id="day6">
+    <div class="day-top" onclick="toggleDay('day6')">
+      <span class="day-date">Mar 27</span>
+      <span class="day-name">Build: Structured Data Extraction Pipeline (Exam Exercise 3)</span>
+      <div class="day-progress"><div class="day-mini-bar"><div class="day-mini-fill" id="df-day6" style="width:0%"></div></div><span class="day-pct-txt" id="dp-day6">0%</span></div>
+      <span class="chevron" id="ch-day6">&#9654;</span>
+    </div>
+    <div class="day-items" id="di-day6">
+      <div class="check-row"><input type="checkbox" id="t25" onchange="tick()"><label class="check-label" for="t25"><span class="tag tag-repo">Repo</span>Open anthropic-cookbook <code>patterns/</code> — study all structured output notebooks · <a href="https://github.com/anthropics/anthropic-cookbook" target="_blank">github.com/anthropics/anthropic-cookbook</a></label></div>
+      <div class="check-row"><input type="checkbox" id="t26" onchange="tick()"><label class="check-label" for="t26"><span class="tag tag-d4">D4</span>Build: extraction tool with JSON schema — test with 5 docs where fields are absent (must return null, not hallucinate)</label></div>
+      <div class="check-row"><input type="checkbox" id="t27" onchange="tick()"><label class="check-label" for="t27"><span class="tag tag-d4">D4</span>Add: field-level confidence scores, route low-confidence extractions to a "human review" queue</label></div>
+      <div class="check-row"><input type="checkbox" id="t28" onchange="tick()"><label class="check-label" for="t28"><span class="tag tag-repo">Repo</span>Read Claude Code Ultimate Guide — CLAUDE.md section · <a href="https://github.com/FlorianBruniaux/claude-code-ultimate-guide" target="_blank">github.com/FlorianBruniaux/claude-code-ultimate-guide</a></label></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ WEEK 2 ═══════ -->
+<div class="week-pane" id="pane-1">
+  <div class="week-header">
+    <div class="week-meta"><span class="week-badge">Week 2 · Mar 28–Apr 3</span></div>
+    <div class="week-name">Agentic Architecture & Orchestration</div>
+    <div class="week-desc">Domain D1 · 27% of exam — highest weight · Most complex and important week</div>
+    <div class="week-prog-row">
+      <div class="week-prog-track"><div class="week-prog-fill" id="wf1" style="width:0%"></div></div>
+      <div class="week-pct-label" id="wp1">0%</div>
+    </div>
+  </div>
+
+  <div class="section-head">Day 8 — Mar 28 · Agentic Loop Fundamentals</div>
+  <div class="day-block" id="day7">
+    <div class="day-top" onclick="toggleDay('day7')">
+      <span class="day-date">Mar 28</span>
+      <span class="day-name">Agentic loop control flow + stop_reason mastery</span>
+      <div class="day-progress"><div class="day-mini-bar"><div class="day-mini-fill" id="df-day7" style="width:0%"></div></div><span class="day-pct-txt" id="dp-day7">0%</span></div>
+      <span class="chevron" id="ch-day7">&#9654;</span>
+    </div>
+    <div class="day-items" id="di-day7">
+      <div class="check-row"><input type="checkbox" id="t29" onchange="tick()"><label class="check-label" for="t29"><span class="tag tag-course">Course</span>Anthropic Academy — Intro to Agent Skills (all modules) · <a href="https://anthropic.skilljar.com/introduction-to-agent-skills" target="_blank">anthropic.skilljar.com</a></label></div>
+      <div class="check-row"><input type="checkbox" id="t30" onchange="tick()"><label class="check-label" for="t30"><span class="tag tag-repo">Repo</span>Clone claude-agent-sdk-demos — run getting-started example, trace every line · <a href="https://github.com/anthropics/claude-agent-sdk-demos" target="_blank">github.com/anthropics/claude-agent-sdk-demos</a></label></div>
+      <div class="check-row"><input type="checkbox" id="t31" onchange="tick()"><label class="check-label" for="t31"><span class="tag tag-d1">D1</span>Build: minimal agentic loop — stop_reason=="tool_use" → execute → append result → continue; stop on "end_turn"</label></div>
+      <div class="check-row"><input type="checkbox" id="t32" onchange="tick()"><label class="check-label" for="t32"><span class="tag tag-d1">D1</span>Read Agent SDK docs — AgentDefinition, allowedTools, system prompts · <a href="https://docs.anthropic.com/en/docs/claude-code/sdk" target="_blank">docs.anthropic.com</a></label></div>
+      <div class="check-row"><input type="checkbox" id="t33" onchange="tick()"><label class="check-label" for="t33"><span class="tag tag-d1">D1</span>Memorize: NEVER parse natural language to terminate loop; NEVER use iteration cap as primary stop mechanism</label></div>
+    </div>
+  </div>
+
+  <div class="section-head">Day 9–10 — Mar 29–30 · Coordinator-Subagent Pattern</div>
+  <div class="day-block" id="day8">
+    <div class="day-top" onclick="toggleDay('day8')">
+      <span class="day-date">Mar 29–30</span>
+      <span class="day-name">Hub-and-spoke orchestration + parallel subagents</span>
+      <div class="day-progress"><div class="day-mini-bar"><div class="day-mini-fill" id="df-day8" style="width:0%"></div></div><span class="day-pct-txt" id="dp-day8">0%</span></div>
+      <span class="chevron" id="ch-day8">&#9654;</span>
+    </div>
+    <div class="day-items" id="di-day8">
+      <div class="check-row"><input type="checkbox" id="t34" onchange="tick()"><label class="check-label" for="t34"><span class="tag tag-repo">Repo</span>Study claude-agent-sdk-demos multi-agent research system — read coordinator, search, analysis, synthesis agents · <a href="https://github.com/anthropics/claude-agent-sdk-demos" target="_blank">github.com</a></label></div>
+      <div class="check-row"><input type="checkbox" id="t35" onchange="tick()"><label class="check-label" for="t35"><span class="tag tag-d1">D1</span>Build: coordinator + 2 subagents — Task tool MUST be in coordinator's allowedTools list</label></div>
+      <div class="check-row"><input type="checkbox" id="t36" onchange="tick()"><label class="check-label" for="t36"><span class="tag tag-d1">D1</span>Critical test: confirm subagents do NOT inherit coordinator context — pass all findings explicitly in each subagent prompt</label></div>
+      <div class="check-row"><input type="checkbox" id="t37" onchange="tick()"><label class="check-label" for="t37"><span class="tag tag-d1">D1</span>Build: parallel subagent execution — emit multiple Task tool calls in ONE coordinator response (not sequential turns)</label></div>
+      <div class="check-row"><input type="checkbox" id="t38" onchange="tick()"><label class="check-label" for="t38"><span class="tag tag-repo">Repo</span>Read anthropic-cookbook <code>multimodal/using_sub_agents.ipynb</code> · <a href="https://github.com/anthropics/anthropic-cookbook" target="_blank">github.com</a></label></div>
+      <div class="check-row"><input type="checkbox" id="t39" onchange="tick()"><label class="check-label" for="t39"><span class="tag tag-d1">D1</span>Build: iterative refinement — coordinator evaluates synthesis, detects gaps, re-delegates with targeted queries</label></div>
+    </div>
+  </div>
+
+  <div class="section-head">Day 11–12 — Mar 31–Apr 1 · SDK Hooks & Programmatic Enforcement</div>
+  <div class="day-block" id="day9">
+    <div class="day-top" onclick="toggleDay('day9')">
+      <span class="day-date">Mar 31–Apr 1</span>
+      <span class="day-name">PostToolUse hooks + prerequisite gates (most tested concept)</span>
+      <div class="day-progress"><div class="day-mini-bar"><div class="day-mini-fill" id="df-day9" style="width:0%"></div></div><span class="day-pct-txt" id="dp-day9">0%</span></div>
+      <span class="chevron" id="ch-day9">&#9654;</span>
+    </div>
+    <div class="day-items" id="di-day9">
+      <div class="check-row"><input type="checkbox" id="t40" onchange="tick()"><label class="check-label" for="t40"><span class="tag tag-d1">D1</span>Build: PostToolUse hook normalizing Unix timestamps + ISO 8601 + numeric status codes from 3 different MCP tools</label></div>
+      <div class="check-row"><input type="checkbox" id="t41" onchange="tick()"><label class="check-label" for="t41"><span class="tag tag-d1">D1</span>Build: tool call interception — block process_refund if amount > $500, redirect to escalate_to_human</label></div>
+      <div class="check-row"><input type="checkbox" id="t42" onchange="tick()"><label class="check-label" for="t42"><span class="tag tag-d1">D1</span>Build: programmatic prerequisite — block lookup_order AND process_refund until get_customer returns verified customer ID</label></div>
+      <div class="check-row"><input type="checkbox" id="t43" onchange="tick()"><label class="check-label" for="t43"><span class="tag tag-d1">D1</span>Core concept: programmatic enforcement = deterministic guarantee. Prompt instruction = probabilistic only. Never mix these up on exam.</label></div>
+    </div>
+  </div>
+
+  <div class="section-head">Day 13 — Apr 2 · Session Management & Task Decomposition</div>
+  <div class="day-block" id="day10">
+    <div class="day-top" onclick="toggleDay('day10')">
+      <span class="day-date">Apr 2</span>
+      <span class="day-name">--resume, fork_session, plan mode vs direct execution</span>
+      <div class="day-progress"><div class="day-mini-bar"><div class="day-mini-fill" id="df-day10" style="width:0%"></div></div><span class="day-pct-txt" id="dp-day10">0%</span></div>
+      <span class="chevron" id="ch-day10">&#9654;</span>
+    </div>
+    <div class="day-items" id="di-day10">
+      <div class="check-row"><input type="checkbox" id="t44" onchange="tick()"><label class="check-label" for="t44"><span class="tag tag-d1">D1</span>Practice --resume &lt;session-name&gt; — resume named session, inform Claude about changed files for targeted re-analysis</label></div>
+      <div class="check-row"><input type="checkbox" id="t45" onchange="tick()"><label class="check-label" for="t45"><span class="tag tag-d1">D1</span>Practice fork_session — create 2 parallel branches from shared baseline to explore different refactoring strategies</label></div>
+      <div class="check-row"><input type="checkbox" id="t46" onchange="tick()"><label class="check-label" for="t46"><span class="tag tag-d3">D3</span>Test plan mode: (a) 45-file library migration → plan mode; (b) single-file bug with stack trace → direct execution</label></div>
+      <div class="check-row"><input type="checkbox" id="t47" onchange="tick()"><label class="check-label" for="t47"><span class="tag tag-repo">Repo</span>Study claude-quickstarts — autonomous coding agent, two-agent pattern, session persistence via git · <a href="https://github.com/anthropics/claude-quickstarts" target="_blank">github.com/anthropics/claude-quickstarts</a></label></div>
+    </div>
+  </div>
+
+  <div class="section-head">Day 14 — Apr 3 · Week 2 Hands-on Exercise</div>
+  <div class="day-block" id="day11">
+    <div class="day-top" onclick="toggleDay('day11')">
+      <span class="day-date">Apr 3</span>
+      <span class="day-name">Build: Full Customer Support Agent (Exam Exercise 1)</span>
+      <div class="day-progress"><div class="day-mini-bar"><div class="day-mini-fill" id="df-day11" style="width:0%"></div></div><span class="day-pct-txt" id="dp-day11">0%</span></div>
+      <span class="chevron" id="ch-day11">&#9654;</span>
+    </div>
+    <div class="day-items" id="di-day11">
+      <div class="check-row"><input type="checkbox" id="t48" onchange="tick()"><label class="check-label" for="t48"><span class="tag tag-d1">D1</span>Build: 4 MCP tools — get_customer, lookup_order, process_refund, escalate_to_human — full descriptions differentiating each</label></div>
+      <div class="check-row"><input type="checkbox" id="t49" onchange="tick()"><label class="check-label" for="t49"><span class="tag tag-d1">D1</span>Wire: correct agentic loop with stop_reason, structured error responses (errorCategory, isRetryable boolean)</label></div>
+      <div class="check-row"><input type="checkbox" id="t50" onchange="tick()"><label class="check-label" for="t50"><span class="tag tag-d1">D1</span>Add: programmatic hook blocking refunds >$500 + interception redirecting to escalate_to_human</label></div>
+      <div class="check-row"><input type="checkbox" id="t51" onchange="tick()"><label class="check-label" for="t51"><span class="tag tag-d1">D1</span>Test: multi-concern input (returns + billing + account) — agent decomposes, handles parallel, synthesizes unified response</label></div>
+      <div class="check-row"><input type="checkbox" id="t52" onchange="tick()"><label class="check-label" for="t52"><span class="tag tag-repo">Repo</span>Read awesome-claude-code — subagent orchestration, master-clone architecture diagrams · <a href="https://github.com/hesreallyhim/awesome-claude-code" target="_blank">github.com/hesreallyhim/awesome-claude-code</a></label></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ WEEK 3 ═══════ -->
+<div class="week-pane" id="pane-2">
+  <div class="week-header">
+    <div class="week-meta"><span class="week-badge">Week 3 · Apr 4–10</span></div>
+    <div class="week-name">Tool Design, MCP Integration & Context Management</div>
+    <div class="week-desc">Domains D2 + D5 · 33% of exam · Production reliability patterns</div>
+    <div class="week-prog-row">
+      <div class="week-prog-track"><div class="week-prog-fill" id="wf2" style="width:0%"></div></div>
+      <div class="week-pct-label" id="wp2">0%</div>
+    </div>
+  </div>
+
+  <div class="section-head">Day 15–16 — Apr 4–5 · MCP Tool Design</div>
+  <div class="day-block" id="day12">
+    <div class="day-top" onclick="toggleDay('day12')">
+      <span class="day-date">Apr 4–5</span>
+      <span class="day-name">Tool descriptions + MCP server configuration</span>
+      <div class="day-progress"><div class="day-mini-bar"><div class="day-mini-fill" id="df-day12" style="width:0%"></div></div><span class="day-pct-txt" id="dp-day12">0%</span></div>
+      <span class="chevron" id="ch-day12">&#9654;</span>
+    </div>
+    <div class="day-items" id="di-day12">
+      <div class="check-row"><input type="checkbox" id="t53" onchange="tick()"><label class="check-label" for="t53"><span class="tag tag-course">Course</span>Anthropic Academy — Intro to MCP (all modules) · <a href="https://anthropic.skilljar.com/introduction-to-model-context-protocol" target="_blank">anthropic.skilljar.com</a></label></div>
+      <div class="check-row"><input type="checkbox" id="t54" onchange="tick()"><label class="check-label" for="t54"><span class="tag tag-course">Course</span>Anthropic Academy — Advanced MCP Topics (all modules) · <a href="https://anthropic.skilljar.com/model-context-protocol-advanced-topics" target="_blank">anthropic.skilljar.com</a></label></div>
+      <div class="check-row"><input type="checkbox" id="t55" onchange="tick()"><label class="check-label" for="t55"><span class="tag tag-repo">Repo</span>Clone anthropic-mcp-servers — read every tool description in Filesystem, Git, GitHub, Everything servers · <a href="https://github.com/madhukarkumar/anthropic-mcp-servers" target="_blank">github.com</a></label></div>
+      <div class="check-row"><input type="checkbox" id="t56" onchange="tick()"><label class="check-label" for="t56"><span class="tag tag-d2">D2</span>Build: split generic analyze_document → extract_data_points, summarize_content, verify_claim_against_source</label></div>
+      <div class="check-row"><input type="checkbox" id="t57" onchange="tick()"><label class="check-label" for="t57"><span class="tag tag-d2">D2</span>Configure: project-scoped .mcp.json with ${GITHUB_TOKEN} env var expansion — test token is NOT hardcoded</label></div>
+      <div class="check-row"><input type="checkbox" id="t58" onchange="tick()"><label class="check-label" for="t58"><span class="tag tag-d2">D2</span>Configure: personal ~/.claude.json for experimental MCP server — confirm both project + personal servers available simultaneously</label></div>
+    </div>
+  </div>
+
+  <div class="section-head">Day 17 — Apr 6 · Structured Errors & Tool Distribution</div>
+  <div class="day-block" id="day13">
+    <div class="day-top" onclick="toggleDay('day13')">
+      <span class="day-date">Apr 6</span>
+      <span class="day-name">isError pattern + scoped tool access per agent</span>
+      <div class="day-progress"><div class="day-mini-bar"><div class="day-mini-fill" id="df-day13" style="width:0%"></div></div><span class="day-pct-txt" id="dp-day13">0%</span></div>
+      <span class="chevron" id="ch-day13">&#9654;</span>
+    </div>
+    <div class="day-items" id="di-day13">
+      <div class="check-row"><input type="checkbox" id="t59" onchange="tick()"><label class="check-label" for="t59"><span class="tag tag-d2">D2</span>Build: MCP tool returning structured errors — isError:true, errorCategory, isRetryable boolean</label></div>
+      <div class="check-row"><input type="checkbox" id="t60" onchange="tick()"><label class="check-label" for="t60"><span class="tag tag-d2">D2</span>Test: distinguish access failure (timeout → retry decision) from valid empty result (success, no matches found)</label></div>
+      <div class="check-row"><input type="checkbox" id="t61" onchange="tick()"><label class="check-label" for="t61"><span class="tag tag-d2">D2</span>Implement: scoped tool access — search agent 4–5 tools; synthesis agent gets ONLY verify_fact (not full search suite)</label></div>
+      <div class="check-row"><input type="checkbox" id="t62" onchange="tick()"><label class="check-label" for="t62"><span class="tag tag-d2">D2</span>Memorize: giving an agent 18+ tools degrades selection reliability — 4–5 tools per agent is the production target</label></div>
+    </div>
+  </div>
+
+  <div class="section-head">Day 18–19 — Apr 7–8 · Context Window Management</div>
+  <div class="day-block" id="day14">
+    <div class="day-top" onclick="toggleDay('day14')">
+      <span class="day-date">Apr 7–8</span>
+      <span class="day-name">Context preservation + lost-in-the-middle + scratchpad files</span>
+      <div class="day-progress"><div class="day-mini-bar"><div class="day-mini-fill" id="df-day14" style="width:0%"></div></div><span class="day-pct-txt" id="dp-day14">0%</span></div>
+      <span class="chevron" id="ch-day14">&#9654;</span>
+    </div>
+    <div class="day-items" id="di-day14">
+      <div class="check-row"><input type="checkbox" id="t63" onchange="tick()"><label class="check-label" for="t63"><span class="tag tag-d5">D5</span>Build: extract transactional facts (amounts, dates, order IDs) into persistent "case facts" block in every subsequent prompt</label></div>
+      <div class="check-row"><input type="checkbox" id="t64" onchange="tick()"><label class="check-label" for="t64"><span class="tag tag-d5">D5</span>Build: trim verbose tool output — 40-field order lookup trimmed to 5 return-relevant fields before appending to context</label></div>
+      <div class="check-row"><input type="checkbox" id="t65" onchange="tick()"><label class="check-label" for="t65"><span class="tag tag-d5">D5</span>Study: lost-in-the-middle — place key summaries at START of aggregated inputs + use explicit section headers</label></div>
+      <div class="check-row"><input type="checkbox" id="t66" onchange="tick()"><label class="check-label" for="t66"><span class="tag tag-d5">D5</span>Build: scratchpad file pattern — agent records key findings to file, references it in later turns</label></div>
+      <div class="check-row"><input type="checkbox" id="t67" onchange="tick()"><label class="check-label" for="t67"><span class="tag tag-d5">D5</span>Practice /compact — use during long exploration when context fills with verbose discovery output</label></div>
+    </div>
+  </div>
+
+  <div class="section-head">Day 20–21 — Apr 9–10 · Escalation + Error Propagation</div>
+  <div class="day-block" id="day15">
+    <div class="day-top" onclick="toggleDay('day15')">
+      <span class="day-date">Apr 9–10</span>
+      <span class="day-name">Escalation triggers + structured multi-agent error propagation + provenance</span>
+      <div class="day-progress"><div class="day-mini-bar"><div class="day-mini-fill" id="df-day15" style="width:0%"></div></div><span class="day-pct-txt" id="dp-day15">0%</span></div>
+      <span class="chevron" id="ch-day15">&#9654;</span>
+    </div>
+    <div class="day-items" id="di-day15">
+      <div class="check-row"><input type="checkbox" id="t68" onchange="tick()"><label class="check-label" for="t68"><span class="tag tag-d5">D5</span>Memorize triggers: customer requests human → honor immediately (no investigation first); policy gap → escalate; sentiment ≠ complexity</label></div>
+      <div class="check-row"><input type="checkbox" id="t69" onchange="tick()"><label class="check-label" for="t69"><span class="tag tag-d5">D5</span>Build: multi-agent error propagation — subagent timeout returns structured context (failure type, attempted query, partial results, alternatives)</label></div>
+      <div class="check-row"><input type="checkbox" id="t70" onchange="tick()"><label class="check-label" for="t70"><span class="tag tag-d5">D5</span>Build: synthesis with conflicting sources — annotate BOTH values with source attribution, do NOT arbitrarily pick one</label></div>
+      <div class="check-row"><input type="checkbox" id="t71" onchange="tick()"><label class="check-label" for="t71"><span class="tag tag-d5">D5</span>Build: subagent structured output includes claim + evidence excerpt + source URL + publication date</label></div>
+      <div class="check-row"><input type="checkbox" id="t72" onchange="tick()"><label class="check-label" for="t72"><span class="tag tag-d1">D1</span>Complete: Multi-Agent Research Pipeline (Exam Exercise 4) — coordinator + web search + doc analysis + synthesis + error propagation</label></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ WEEK 4 ═══════ -->
+<div class="week-pane" id="pane-3">
+  <div class="week-header">
+    <div class="week-meta"><span class="week-badge">Week 4 · Apr 11–18</span></div>
+    <div class="week-name">All 6 Scenarios, Anti-Patterns & Mock Exams</div>
+    <div class="week-desc">Zero new material after Apr 15 · Scenario review, mock tests, exam strategy only</div>
+    <div class="week-prog-row">
+      <div class="week-prog-track"><div class="week-prog-fill" id="wf3" style="width:0%"></div></div>
+      <div class="week-pct-label" id="wp3">0%</div>
+    </div>
+  </div>
+
+  <div class="section-head">Day 22 — Apr 11 · CI/CD Integration (Scenario 5)</div>
+  <div class="day-block" id="day16">
+    <div class="day-top" onclick="toggleDay('day16')">
+      <span class="day-date">Apr 11</span>
+      <span class="day-name">Claude Code CI/CD + --json-schema + multi-pass reviews</span>
+      <div class="day-progress"><div class="day-mini-bar"><div class="day-mini-fill" id="df-day16" style="width:0%"></div></div><span class="day-pct-txt" id="dp-day16">0%</span></div>
+      <span class="chevron" id="ch-day16">&#9654;</span>
+    </div>
+    <div class="day-items" id="di-day16">
+      <div class="check-row"><input type="checkbox" id="t73" onchange="tick()"><label class="check-label" for="t73"><span class="tag tag-repo">Repo</span>Clone claude-code-action — study CI/CD integration, path-specific reviews, allowed_tools restriction · <a href="https://github.com/anthropics/claude-code-action" target="_blank">github.com/anthropics/claude-code-action</a></label></div>
+      <div class="check-row"><input type="checkbox" id="t74" onchange="tick()"><label class="check-label" for="t74"><span class="tag tag-d3">D3</span>Run: <code>claude -p "analyze this PR for security issues"</code> — confirm non-interactive, doesn't hang</label></div>
+      <div class="check-row"><input type="checkbox" id="t75" onchange="tick()"><label class="check-label" for="t75"><span class="tag tag-d3">D3</span>Run: <code>claude -p "..." --output-format json --json-schema schema.json</code> — produce structured findings for automated PR comments</label></div>
+      <div class="check-row"><input type="checkbox" id="t76" onchange="tick()"><label class="check-label" for="t76"><span class="tag tag-d3">D3</span>Build: multi-pass review for 14-file PR — per-file local analysis pass + separate cross-file integration pass</label></div>
+      <div class="check-row"><input type="checkbox" id="t77" onchange="tick()"><label class="check-label" for="t77"><span class="tag tag-d3">D3</span>Memorize: CLAUDE_HEADLESS and --batch DO NOT EXIST. -p flag is the ONLY correct way to run Claude Code in CI</label></div>
+    </div>
+  </div>
+
+  <div class="section-head">Day 23 — Apr 12 · Team Workflow Exercise + Scenario 6</div>
+  <div class="day-block" id="day17">
+    <div class="day-top" onclick="toggleDay('day17')">
+      <span class="day-date">Apr 12</span>
+      <span class="day-name">Build: Team Workflow (Exercise 2) + Structured Extraction scenario</span>
+      <div class="day-progress"><div class="day-mini-bar"><div class="day-mini-fill" id="df-day17" style="width:0%"></div></div><span class="day-pct-txt" id="dp-day17">0%</span></div>
+      <span class="chevron" id="ch-day17">&#9654;</span>
+    </div>
+    <div class="day-items" id="di-day17">
+      <div class="check-row"><input type="checkbox" id="t78" onchange="tick()"><label class="check-label" for="t78"><span class="tag tag-d3">D3</span>Build: full CLAUDE.md hierarchy + .claude/rules/ glob patterns + skill with context:fork + .mcp.json with ${ENV_VAR}</label></div>
+      <div class="check-row"><input type="checkbox" id="t79" onchange="tick()"><label class="check-label" for="t79"><span class="tag tag-d3">D3</span>Test plan mode: (a) monolith-to-microservices (45 files → plan mode); (b) add one date validation → direct execution</label></div>
+      <div class="check-row"><input type="checkbox" id="t80" onchange="tick()"><label class="check-label" for="t80"><span class="tag tag-d4">D4</span>Review: tool_use + JSON schema eliminates SYNTAX errors but NOT semantic errors (values in wrong fields, totals don't sum)</label></div>
+      <div class="check-row"><input type="checkbox" id="t81" onchange="tick()"><label class="check-label" for="t81"><span class="tag tag-d4">D4</span>Review: self-correction flow — extract calculated_total alongside stated_total, flag conflict_detected boolean</label></div>
+    </div>
+  </div>
+
+  <div class="section-head">Day 24 — Apr 13 · Scenarios 3 & 4 Deep Review</div>
+  <div class="day-block" id="day18">
+    <div class="day-top" onclick="toggleDay('day18')">
+      <span class="day-date">Apr 13</span>
+      <span class="day-name">Multi-Agent Research + Developer Productivity scenarios</span>
+      <div class="day-progress"><div class="day-mini-bar"><div class="day-mini-fill" id="df-day18" style="width:0%"></div></div><span class="day-pct-txt" id="dp-day18">0%</span></div>
+      <span class="chevron" id="ch-day18">&#9654;</span>
+    </div>
+    <div class="day-items" id="di-day18">
+      <div class="check-row"><input type="checkbox" id="t82" onchange="tick()"><label class="check-label" for="t82"><span class="tag tag-d1">D1</span>Scenario 3 trap: all subagents succeed but coverage is wrong → check COORDINATOR decomposition scope, not subagents</label></div>
+      <div class="check-row"><input type="checkbox" id="t83" onchange="tick()"><label class="check-label" for="t83"><span class="tag tag-d2">D2</span>Scenario 4: Grep=content search; Glob=file-path pattern; Edit=unique text modification; Read+Write=fallback when Edit fails</label></div>
+      <div class="check-row"><input type="checkbox" id="t84" onchange="tick()"><label class="check-label" for="t84"><span class="tag tag-d2">D2</span>Scenario 4: synthesis agent gets scoped verify_fact tool ONLY — NOT full web search (over-provisioning = cross-specialization misuse)</label></div>
+      <div class="check-row"><input type="checkbox" id="t85" onchange="tick()"><label class="check-label" for="t85"><span class="tag tag-d5">D5</span>Scenario 3: synthesis output must annotate coverage gaps explicitly with which topics had unavailable sources</label></div>
+    </div>
+  </div>
+
+  <div class="section-head">Day 25–26 — Apr 14–15 · Anti-Patterns Speed Review</div>
+  <div class="day-block" id="day19">
+    <div class="day-top" onclick="toggleDay('day19')">
+      <span class="day-date">Apr 14–15</span>
+      <span class="day-name">Master anti-pattern review + all 12 official sample questions</span>
+      <div class="day-progress"><div class="day-mini-bar"><div class="day-mini-fill" id="df-day19" style="width:0%"></div></div><span class="day-pct-txt" id="dp-day19">0%</span></div>
+      <span class="chevron" id="ch-day19">&#9654;</span>
+    </div>
+    <div class="day-items" id="di-day19">
+      <div class="check-row"><input type="checkbox" id="t86" onchange="tick()"><label class="check-label" for="t86"><span class="tag tag-exam">Exam</span>Re-read all 12 sample questions in official exam guide PDF — write out WHY each wrong answer is wrong</label></div>
+      <div class="check-row"><input type="checkbox" id="t87" onchange="tick()"><label class="check-label" for="t87"><span class="tag tag-d1">D1</span>Anti-pattern: "enhance system prompt to enforce tool ordering" → Wrong. Use programmatic prerequisite gate</label></div>
+      <div class="check-row"><input type="checkbox" id="t88" onchange="tick()"><label class="check-label" for="t88"><span class="tag tag-d1">D1</span>Anti-pattern: "sentiment-based escalation" → Wrong. Sentiment ≠ case complexity. Use explicit criteria + few-shot examples</label></div>
+      <div class="check-row"><input type="checkbox" id="t89" onchange="tick()"><label class="check-label" for="t89"><span class="tag tag-d4">D4</span>Anti-pattern: "switch all workflows to Batch API for cost savings" → Wrong. Pre-merge checks MUST use synchronous API</label></div>
+      <div class="check-row"><input type="checkbox" id="t90" onchange="tick()"><label class="check-label" for="t90"><span class="tag tag-d4">D4</span>Anti-pattern: "self-review on same session" → Wrong. Use independent Claude instance without generator's reasoning context</label></div>
+      <div class="check-row"><input type="checkbox" id="t91" onchange="tick()"><label class="check-label" for="t91"><span class="tag tag-d5">D5</span>Anti-pattern: "return empty result on subagent failure" → Wrong. Return structured error context for coordinator recovery</label></div>
+      <div class="check-row"><input type="checkbox" id="t92" onchange="tick()"><label class="check-label" for="t92"><span class="tag tag-d2">D2</span>Anti-pattern: "consolidate 2 similar tools into 1 as first step" → Wrong. First improve descriptions; consolidation is heavier work</label></div>
+    </div>
+  </div>
+
+  <div class="section-head">Day 27 — Apr 16 · Official Practice Exam + Mock Tests</div>
+  <div class="day-block" id="day20">
+    <div class="day-top" onclick="toggleDay('day20')">
+      <span class="day-date">Apr 16</span>
+      <span class="day-name">Full mock exams — flag every wrong answer, drill weakest domain</span>
+      <div class="day-progress"><div class="day-mini-bar"><div class="day-mini-fill" id="df-day20" style="width:0%"></div></div><span class="day-pct-txt" id="dp-day20">0%</span></div>
+      <span class="chevron" id="ch-day20">&#9654;</span>
+    </div>
+    <div class="day-items" id="di-day20">
+      <div class="check-row"><input type="checkbox" id="t93" onchange="tick()"><label class="check-label" for="t93"><span class="tag tag-exam">Exam</span>Complete Anthropic official practice exam on Skilljar — read every explanation · <a href="https://anthropic.skilljar.com" target="_blank">anthropic.skilljar.com</a></label></div>
+      <div class="check-row"><input type="checkbox" id="t94" onchange="tick()"><label class="check-label" for="t94"><span class="tag tag-exam">Exam</span>Complete Udemy practice test (60 questions, scenario-based) · <a href="https://www.udemy.com" target="_blank">udemy.com — search "Claude Certified Architect"</a></label></div>
+      <div class="check-row"><input type="checkbox" id="t95" onchange="tick()"><label class="check-label" for="t95"><span class="tag tag-exam">Exam</span>Free practice questions at claudecertifications.com · <a href="https://claudecertifications.com" target="_blank">claudecertifications.com</a></label></div>
+      <div class="check-row"><input type="checkbox" id="t96" onchange="tick()"><label class="check-label" for="t96"><span class="tag tag-exam">Exam</span>Identify weakest domain from mock results — spend 2 hours drilling ONLY that domain's questions</label></div>
+      <div class="check-row"><input type="checkbox" id="t97" onchange="tick()"><label class="check-label" for="t97"><span class="tag tag-exam">Exam</span>Read Balaji Ashok Kumar prep guide (Medium, March 2026) — domain cheatsheet and mental models</label></div>
+    </div>
+  </div>
+
+  <div class="section-head">Day 28 — Apr 17–18 · Final Review + Exam Day</div>
+  <div class="day-block" id="day21">
+    <div class="day-top" onclick="toggleDay('day21')">
+      <span class="day-date">Apr 17–18</span>
+      <span class="day-name">Light review + register exam + exam day logistics</span>
+      <div class="day-progress"><div class="day-mini-bar"><div class="day-mini-fill" id="df-day21" style="width:0%"></div></div><span class="day-pct-txt" id="dp-day21">0%</span></div>
+      <span class="chevron" id="ch-day21">&#9654;</span>
+    </div>
+    <div class="day-items" id="di-day21">
+      <div class="check-row"><input type="checkbox" id="t98" onchange="tick()"><label class="check-label" for="t98"><span class="tag tag-exam">Exam</span>Light review only — go over flagged questions from mock exams and anti-pattern notes once</label></div>
+      <div class="check-row"><input type="checkbox" id="t99" onchange="tick()"><label class="check-label" for="t99"><span class="tag tag-exam">Exam</span>Register via Anthropic Partner Network → Skilljar · <a href="https://www.anthropic.com/news/claude-partner-network" target="_blank">anthropic.com/news/claude-partner-network</a></label></div>
+      <div class="check-row"><input type="checkbox" id="t100" onchange="tick()"><label class="check-label" for="t100"><span class="tag tag-exam">Exam</span>Exam strategy: 60 questions / 120 min = 2 min per question · guess on unknowns (no penalty) · flag uncertain, return at end</label></div>
+      <div class="check-row"><input type="checkbox" id="t101" onchange="tick()"><label class="check-label" for="t101"><span class="tag tag-exam">Exam</span>Target: 720/1000 to pass (~72% correct) · No Claude, no docs, no browser during exam · You've got this.</label></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ REPOS SECTION ═══════ -->
+<div class="repos-section">
+  <div class="repos-title">All Repos to Clone & Work Through</div>
+  <div class="repos-sub">Check each repo off as you clone and complete the hands-on work. Progress saves automatically.</div>
+  <div class="repos-grid">
+
+    <div class="repo-card" id="rc0">
+      <div class="repo-top">
+        <div class="repo-name">anthropics/claude-agent-sdk-demos</div>
+        <div class="repo-tier tier-1">Tier 1</div>
+      </div>
+      <div class="repo-desc">Official Agent SDK demos — multi-agent research system, session persistence, coordinator-subagent patterns. Most exam-relevant repo.</div>
+      <div class="repo-domain-tags"><span class="tag tag-d1">D1</span><span class="tag tag-d5">D5</span></div>
+      <a class="repo-link" href="https://github.com/anthropics/claude-agent-sdk-demos" target="_blank">github.com/anthropics/claude-agent-sdk-demos</a>
+      <div class="repo-check-row">
+        <input type="checkbox" id="r0" onchange="repoTick('rc0','r0')">
+        <label class="repo-check-label" for="r0">Mark as cloned & completed</label>
+        <span class="repo-done-badge">Done</span>
+      </div>
+    </div>
+
+    <div class="repo-card" id="rc1">
+      <div class="repo-top">
+        <div class="repo-name">anthropics/anthropic-cookbook</div>
+        <div class="repo-tier tier-1">Tier 1</div>
+      </div>
+      <div class="repo-desc">Copy-paste code for tool use, sub-agents, JSON mode, automated evaluations, and prompt caching. Key notebooks: customer_service_agent.ipynb, using_sub_agents.ipynb.</div>
+      <div class="repo-domain-tags"><span class="tag tag-d1">D1</span><span class="tag tag-d4">D4</span></div>
+      <a class="repo-link" href="https://github.com/anthropics/anthropic-cookbook" target="_blank">github.com/anthropics/anthropic-cookbook</a>
+      <div class="repo-check-row">
+        <input type="checkbox" id="r1" onchange="repoTick('rc1','r1')">
+        <label class="repo-check-label" for="r1">Mark as cloned & completed</label>
+        <span class="repo-done-badge">Done</span>
+      </div>
+    </div>
+
+    <div class="repo-card" id="rc2">
+      <div class="repo-top">
+        <div class="repo-name">anthropics/claude-code-action</div>
+        <div class="repo-tier tier-1">Tier 1</div>
+      </div>
+      <div class="repo-desc">Official GitHub Actions CI/CD integration — automatic PR code review, path-specific reviews, structured JSON output with --json-schema, allowed_tools restriction.</div>
+      <div class="repo-domain-tags"><span class="tag tag-d3">D3</span><span class="tag tag-d4">D4</span></div>
+      <a class="repo-link" href="https://github.com/anthropics/claude-code-action" target="_blank">github.com/anthropics/claude-code-action</a>
+      <div class="repo-check-row">
+        <input type="checkbox" id="r2" onchange="repoTick('rc2','r2')">
+        <label class="repo-check-label" for="r2">Mark as cloned & completed</label>
+        <span class="repo-done-badge">Done</span>
+      </div>
+    </div>
+
+    <div class="repo-card" id="rc3">
+      <div class="repo-top">
+        <div class="repo-name">anthropics/skills</div>
+        <div class="repo-tier tier-1">Tier 1</div>
+      </div>
+      <div class="repo-desc">Official Anthropic skills repo — reference implementations showing exact SKILL.md frontmatter format: context:fork, allowed-tools, argument-hint. Read every SKILL.md.</div>
+      <div class="repo-domain-tags"><span class="tag tag-d3">D3</span></div>
+      <a class="repo-link" href="https://github.com/anthropics/skills" target="_blank">github.com/anthropics/skills</a>
+      <div class="repo-check-row">
+        <input type="checkbox" id="r3" onchange="repoTick('rc3','r3')">
+        <label class="repo-check-label" for="r3">Mark as cloned & completed</label>
+        <span class="repo-done-badge">Done</span>
+      </div>
+    </div>
+
+    <div class="repo-card" id="rc4">
+      <div class="repo-top">
+        <div class="repo-name">anthropics/claude-quickstarts</div>
+        <div class="repo-tier tier-1">Tier 1</div>
+      </div>
+      <div class="repo-desc">Autonomous coding agent with two-agent pattern (initializer + coding agent), session persistence via git, browser automation agent using Playwright.</div>
+      <div class="repo-domain-tags"><span class="tag tag-d1">D1</span><span class="tag tag-d5">D5</span></div>
+      <a class="repo-link" href="https://github.com/anthropics/claude-quickstarts" target="_blank">github.com/anthropics/claude-quickstarts</a>
+      <div class="repo-check-row">
+        <input type="checkbox" id="r4" onchange="repoTick('rc4','r4')">
+        <label class="repo-check-label" for="r4">Mark as cloned & completed</label>
+        <span class="repo-done-badge">Done</span>
+      </div>
+    </div>
+
+    <div class="repo-card" id="rc5">
+      <div class="repo-top">
+        <div class="repo-name">anthropics/claude-agent-sdk-python</div>
+        <div class="repo-tier tier-1">Tier 1</div>
+      </div>
+      <div class="repo-desc">Official Python SDK source — study AgentDefinition, allowedTools, hook signatures that appear directly in exam questions. pip install claude-agent-sdk.</div>
+      <div class="repo-domain-tags"><span class="tag tag-d1">D1</span><span class="tag tag-d2">D2</span></div>
+      <a class="repo-link" href="https://github.com/anthropics/claude-agent-sdk-python" target="_blank">github.com/anthropics/claude-agent-sdk-python</a>
+      <div class="repo-check-row">
+        <input type="checkbox" id="r5" onchange="repoTick('rc5','r5')">
+        <label class="repo-check-label" for="r5">Mark as cloned & completed</label>
+        <span class="repo-done-badge">Done</span>
+      </div>
+    </div>
+
+    <div class="repo-card" id="rc6">
+      <div class="repo-top">
+        <div class="repo-name">anthropics/claude-agent-sdk-typescript</div>
+        <div class="repo-tier tier-1">Tier 1</div>
+      </div>
+      <div class="repo-desc">TypeScript SDK — createSdkMcpServer, tool helper with Zod schema validation, full agentic loop pattern. Study if comfortable in TypeScript.</div>
+      <div class="repo-domain-tags"><span class="tag tag-d1">D1</span><span class="tag tag-d2">D2</span></div>
+      <a class="repo-link" href="https://github.com/anthropics/claude-agent-sdk-typescript" target="_blank">github.com/anthropics/claude-agent-sdk-typescript</a>
+      <div class="repo-check-row">
+        <input type="checkbox" id="r6" onchange="repoTick('rc6','r6')">
+        <label class="repo-check-label" for="r6">Mark as cloned & completed</label>
+        <span class="repo-done-badge">Done</span>
+      </div>
+    </div>
+
+    <div class="repo-card" id="rc7">
+      <div class="repo-top">
+        <div class="repo-name">anthropics/claude-plugins-official</div>
+        <div class="repo-tier tier-1">Tier 1</div>
+      </div>
+      <div class="repo-desc">Anthropic's managed directory of high-quality Claude Code plugins. Study production plugin structure — reference for .claude/commands/ and .claude/skills/ work.</div>
+      <div class="repo-domain-tags"><span class="tag tag-d3">D3</span></div>
+      <a class="repo-link" href="https://github.com/anthropics/claude-plugins-official" target="_blank">github.com/anthropics/claude-plugins-official</a>
+      <div class="repo-check-row">
+        <input type="checkbox" id="r7" onchange="repoTick('rc7','r7')">
+        <label class="repo-check-label" for="r7">Mark as cloned & completed</label>
+        <span class="repo-done-badge">Done</span>
+      </div>
+    </div>
+
+    <div class="repo-card" id="rc8">
+      <div class="repo-top">
+        <div class="repo-name">hesreallyhim/awesome-claude-code</div>
+        <div class="repo-tier tier-2">Tier 2</div>
+      </div>
+      <div class="repo-desc">Curated agentic workflow patterns with Mermaid diagrams — subagent orchestration, parallel tool calling, master-clone architecture, wizard workflows, Claude Code Handbook.</div>
+      <div class="repo-domain-tags"><span class="tag tag-d1">D1</span><span class="tag tag-d3">D3</span></div>
+      <a class="repo-link" href="https://github.com/hesreallyhim/awesome-claude-code" target="_blank">github.com/hesreallyhim/awesome-claude-code</a>
+      <div class="repo-check-row">
+        <input type="checkbox" id="r8" onchange="repoTick('rc8','r8')">
+        <label class="repo-check-label" for="r8">Mark as cloned & completed</label>
+        <span class="repo-done-badge">Done</span>
+      </div>
+    </div>
+
+    <div class="repo-card" id="rc9">
+      <div class="repo-top">
+        <div class="repo-name">FlorianBruniaux/claude-code-ultimate-guide</div>
+        <div class="repo-tier tier-2">Tier 2</div>
+      </div>
+      <div class="repo-desc">Beginner to power user — multi-agent topologies, MCP security, production CLAUDE.md templates, quizzes across 9 categories. Directly maps to D3.</div>
+      <div class="repo-domain-tags"><span class="tag tag-d3">D3</span><span class="tag tag-d2">D2</span></div>
+      <a class="repo-link" href="https://github.com/FlorianBruniaux/claude-code-ultimate-guide" target="_blank">github.com/FlorianBruniaux/claude-code-ultimate-guide</a>
+      <div class="repo-check-row">
+        <input type="checkbox" id="r9" onchange="repoTick('rc9','r9')">
+        <label class="repo-check-label" for="r9">Mark as cloned & completed</label>
+        <span class="repo-done-badge">Done</span>
+      </div>
+    </div>
+
+    <div class="repo-card" id="rc10">
+      <div class="repo-top">
+        <div class="repo-name">madhukarkumar/anthropic-mcp-servers</div>
+        <div class="repo-tier tier-2">Tier 2</div>
+      </div>
+      <div class="repo-desc">Reference MCP server implementations — Filesystem, Git, GitHub, Fetch, Everything. The "Everything" server has prompts + resources + tools: study MCP resource catalogs for D2.</div>
+      <div class="repo-domain-tags"><span class="tag tag-d2">D2</span></div>
+      <a class="repo-link" href="https://github.com/madhukarkumar/anthropic-mcp-servers" target="_blank">github.com/madhukarkumar/anthropic-mcp-servers</a>
+      <div class="repo-check-row">
+        <input type="checkbox" id="r10" onchange="repoTick('rc10','r10')">
+        <label class="repo-check-label" for="r10">Mark as cloned & completed</label>
+        <span class="repo-done-badge">Done</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="footer">
+  <p>Progress auto-saves in your browser · CCAF Study Tracker · Starting March 21, 2026</p>
+</div>
+
+</div><!-- end wrap -->
+
+<script>
+const WEEK_IDS = [
+  ['t0','t1','t2','t3','t4','t5','t6','t7','t8','t9','t10','t11','t12','t13','t14','t15','t16','t17','t18','t19','t20','t21','t22','t23','t24','t25','t26','t27','t28'],
+  ['t29','t30','t31','t32','t33','t34','t35','t36','t37','t38','t39','t40','t41','t42','t43','t44','t45','t46','t47','t48','t49','t50','t51','t52'],
+  ['t53','t54','t55','t56','t57','t58','t59','t60','t61','t62','t63','t64','t65','t66','t67','t68','t69','t70','t71','t72'],
+  ['t73','t74','t75','t76','t77','t78','t79','t80','t81','t82','t83','t84','t85','t86','t87','t88','t89','t90','t91','t92','t93','t94','t95','t96','t97','t98','t99','t100','t101']
+];
+
+const DAY_IDS = {
+  day0:['t0','t1','t2','t3'], day1:['t4','t5','t6','t7'], day2:['t8','t9','t10','t11'],
+  day3:['t12','t13','t14','t15','t16'], day4:['t17','t18','t19','t20'],
+  day5:['t21','t22','t23','t24'], day6:['t25','t26','t27','t28'],
+  day7:['t29','t30','t31','t32','t33'], day8:['t34','t35','t36','t37','t38','t39'],
+  day9:['t40','t41','t42','t43'], day10:['t44','t45','t46','t47'],
+  day11:['t48','t49','t50','t51','t52'],
+  day12:['t53','t54','t55','t56','t57','t58'], day13:['t59','t60','t61','t62'],
+  day14:['t63','t64','t65','t66','t67'], day15:['t68','t69','t70','t71','t72'],
+  day16:['t73','t74','t75','t76','t77'], day17:['t78','t79','t80','t81'],
+  day18:['t82','t83','t84','t85'], day19:['t86','t87','t88','t89','t90','t91','t92'],
+  day20:['t93','t94','t95','t96','t97'], day21:['t98','t99','t100','t101']
+};
+
+const STORAGE_KEY = 'ccaf_v2';
+
+function save() {
+  const s = {};
+  document.querySelectorAll('input[type=checkbox]').forEach(c => s[c.id] = c.checked);
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch(e){}
+}
+
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');
+    Object.entries(s).forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.checked = val;
+      if (val && el.labels && el.labels[0]) el.labels[0].classList.add('done');
+      if (id.startsWith('r') && val) document.getElementById('rc'+id.slice(1))?.classList.add('done-card');
+    });
+  } catch(e){}
+}
+
+function tick() {
+  document.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    if (cb.labels && cb.labels[0]) cb.labels[0].classList.toggle('done', cb.checked);
+  });
+  updateAll();
+  save();
+}
+
+function repoTick(cardId, cbId) {
+  const card = document.getElementById(cardId);
+  const cb = document.getElementById(cbId);
+  if (card) card.classList.toggle('done-card', cb.checked);
+  updateAll();
+  save();
+}
+
+function updateAll() {
+  const all = document.querySelectorAll('input[id^="t"]');
+  const done = [...all].filter(c => c.checked).length;
+  const total = all.length;
+  const pct = total ? Math.round(done/total*100) : 0;
+
+  document.getElementById('s-total').textContent = total;
+  document.getElementById('s-done').textContent = done;
+  document.getElementById('s-pct').textContent = pct + '%';
+  document.getElementById('m-fill').style.width = pct + '%';
+  document.getElementById('m-pct-label').textContent = done + ' / ' + total + ' tasks';
+
+  const repos = document.querySelectorAll('input[id^="r"]');
+  const repoDone = [...repos].filter(r => r.checked).length;
+  document.getElementById('s-repos').textContent = repoDone + '/' + repos.length;
+
+  const exam = new Date('2026-04-18');
+  const now = new Date();
+  const diff = Math.max(0, Math.ceil((exam - now)/(1000*60*60*24)));
+  document.getElementById('days-chip').textContent = diff + ' days left';
+
+  WEEK_IDS.forEach((ids, wi) => {
+    const wDone = ids.filter(id => { const el = document.getElementById(id); return el && el.checked; }).length;
+    const wPct = ids.length ? Math.round(wDone/ids.length*100) : 0;
+    const f = document.getElementById('wf'+wi);
+    const p = document.getElementById('wp'+wi);
+    if (f) f.style.width = wPct + '%';
+    if (p) p.textContent = wPct + '%';
+  });
+
+  Object.entries(DAY_IDS).forEach(([day, ids]) => {
+    const dDone = ids.filter(id => { const el = document.getElementById(id); return el && el.checked; }).length;
+    const dPct = ids.length ? Math.round(dDone/ids.length*100) : 0;
+    const f = document.getElementById('df-'+day);
+    const p = document.getElementById('dp-'+day);
+    if (f) f.style.width = dPct + '%';
+    if (p) p.textContent = dPct + '%';
+  });
+}
+
+function toggleDay(id) {
+  const items = document.getElementById('di-'+id);
+  const chev = document.getElementById('ch-'+id);
+  if (!items) return;
+  const open = items.classList.toggle('open');
+  if (chev) chev.classList.toggle('open', open);
+}
+
+function showWeek(n) {
+  document.querySelectorAll('.week-btn').forEach((b,i) => b.classList.toggle('active', i===n));
+  document.querySelectorAll('.week-pane').forEach((p,i) => p.classList.toggle('active', i===n));
+}
+
+load();
+updateAll();
+</script>
+</body>
+</html>
