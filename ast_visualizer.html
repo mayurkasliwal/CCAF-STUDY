@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AST Visualizer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;700;800&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --panel: #111118;
+    --border: #1e1e2e;
+    --accent: #7c3aed;
+    --accent2: #06b6d4;
+    --accent3: #f59e0b;
+    --accent4: #10b981;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --node-class: #7c3aed;
+    --node-func: #06b6d4;
+    --node-assign: #10b981;
+    --node-if: #f59e0b;
+    --node-call: #f43f5e;
+    --node-return: #a78bfa;
+    --node-raise: #fb923c;
+    --node-import: #34d399;
+    --node-default: #94a3b8;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(124,58,237,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,58,237,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  header {
+    position: relative;
+    z-index: 10;
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: rgba(10,10,15,0.8);
+    backdrop-filter: blur(10px);
+  }
+
+  header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, #7c3aed, #06b6d4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  header span {
+    font-size: 11px;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 400px 1fr;
+    height: calc(100vh - 65px);
+    position: relative;
+    z-index: 1;
+  }
+
+  /* LEFT PANEL — code editor */
+  .left-panel {
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    background: var(--panel);
+  }
+
+  .panel-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .dot-red { background: #f43f5e; }
+  .dot-yellow { background: #f59e0b; }
+  .dot-green { background: #10b981; }
+  .dots { display: flex; gap: 6px; }
+
+  textarea {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #a5b4fc;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.7;
+    padding: 16px;
+    resize: none;
+    tab-size: 4;
+  }
+
+  textarea::selection { background: rgba(124,58,237,0.3); }
+
+  .parse-btn {
+    margin: 12px;
+    padding: 12px;
+    background: linear-gradient(135deg, #7c3aed, #5b21b6);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  .parse-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(124,58,237,0.4);
+  }
+
+  .parse-btn:active { transform: translateY(0); }
+
+  /* RIGHT PANEL — graph */
+  .right-panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+  }
+
+  .tab {
+    padding: 12px 20px;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .tab.active {
+    color: var(--accent2);
+    border-bottom-color: var(--accent2);
+  }
+
+  .tab-content { display: none; flex: 1; overflow: hidden; }
+  .tab-content.active { display: flex; flex-direction: column; }
+
+  /* SVG GRAPH */
+  #graph-container {
+    flex: 1;
+    overflow: auto;
+    position: relative;
+  }
+
+  svg {
+    display: block;
+  }
+
+  .node-group { cursor: pointer; }
+
+  .node-rect {
+    rx: 8;
+    ry: 8;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));
+    transition: all 0.2s;
+  }
+
+  .node-group:hover .node-rect {
+    filter: drop-shadow(0 4px 20px rgba(124,58,237,0.5));
+  }
+
+  .node-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    fill: white;
+    font-weight: 600;
+  }
+
+  .node-type {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    fill: rgba(255,255,255,0.5);
+  }
+
+  .edge {
+    fill: none;
+    stroke: rgba(100,116,139,0.3);
+    stroke-width: 1.5;
+  }
+
+  /* TREE LIST VIEW */
+  #tree-container {
+    flex: 1;
+    overflow: auto;
+    padding: 16px;
+  }
+
+  .tree-node {
+    margin: 2px 0;
+    animation: fadeIn 0.2s ease;
+  }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
+
+  .tree-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-size: 12px;
+  }
+
+  .tree-item:hover { background: rgba(255,255,255,0.05); }
+
+  .tree-children {
+    margin-left: 20px;
+    border-left: 1px solid var(--border);
+    padding-left: 12px;
+  }
+
+  .type-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .tree-toggle { color: var(--muted); font-size: 10px; width: 12px; }
+
+  /* STATS BAR */
+  .stats-bar {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    overflow-x: auto;
+  }
+
+  .stat {
+    padding: 10px 20px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 80px;
+  }
+
+  .stat-val {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--accent2);
+  }
+
+  .stat-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* LEGEND */
+  .legend {
+    display: flex;
+    gap: 12px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    background: rgba(10,10,15,0.5);
+  }
+
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--muted); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+  .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--muted);
+  }
+
+  .empty-icon { font-size: 48px; opacity: 0.3; }
+  .empty-text { font-size: 13px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="dots">
+    <span class="dot dot-red"></span>
+    <span class="dot dot-yellow"></span>
+    <span class="dot dot-green"></span>
+  </div>
+  <h1>AST Visualizer</h1>
+  <span>Abstract Syntax Tree Explorer</span>
+</header>
+
+<div class="layout">
+  <!-- LEFT: Code Input -->
+  <div class="left-panel">
+    <div class="panel-header">
+      <span>Python Source</span>
+      <span id="line-count">0 lines</span>
+    </div>
+    <textarea id="code-input" spellcheck="false" placeholder="# Paste your Python code here..."></textarea>
+    <button class="parse-btn" onclick="parseCode()">▶ Parse & Visualize AST</button>
+  </div>
+
+  <!-- RIGHT: Visualization -->
+  <div class="right-panel">
+    <div class="stats-bar" id="stats-bar" style="display:none">
+      <div class="stat"><span class="stat-val" id="stat-nodes">0</span><span class="stat-label">Nodes</span></div>
+      <div class="stat"><span class="stat-val" id="stat-depth">0</span><span class="stat-label">Depth</span></div>
+      <div class="stat"><span class="stat-val" id="stat-funcs">0</span><span class="stat-label">Functions</span></div>
+      <div class="stat"><span class="stat-val" id="stat-classes">0</span><span class="stat-label">Classes</span></div>
+      <div class="stat"><span class="stat-val" id="stat-calls">0</span><span class="stat-label">Calls</span></div>
+      <div class="stat"><span class="stat-val" id="stat-ifs">0</span><span class="stat-label">Branches</span></div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('graph')">Graph View</div>
+      <div class="tab" onclick="switchTab('tree')">Tree View</div>
+    </div>
+
+    <div class="legend" id="legend" style="display:none">
+      <div class="legend-item"><span class="legend-dot" style="background:#7c3aed"></span>Class</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#06b6d4"></span>Function</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#10b981"></span>Assign</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#f59e0b"></span>If</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#f43f5e"></span>Call</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#a78bfa"></span>Return</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#fb923c"></span>Raise</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#34d399"></span>Import</div>
+    </div>
+
+    <div class="tab-content active" id="tab-graph">
+      <div id="graph-container">
+        <div class="empty-state" id="empty-graph">
+          <div class="empty-icon">⬡</div>
+          <div class="empty-text">Paste code and click Parse to visualize</div>
+        </div>
+        <svg id="ast-svg"></svg>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-tree">
+      <div id="tree-container">
+        <div class="empty-state" id="empty-tree">
+          <div class="empty-icon">⬡</div>
+          <div class="empty-text">Paste code and click Parse to visualize</div>
+        </div>
+        <div id="tree-root"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Python AST Parser (JS implementation of key node types) ───────────────
+
+const NODE_COLORS = {
+  Module:      '#475569',
+  ClassDef:    '#7c3aed',
+  FunctionDef: '#06b6d4',
+  AsyncFunctionDef: '#0891b2',
+  Assign:      '#10b981',
+  AnnAssign:   '#059669',
+  AugAssign:   '#047857',
+  If:          '#f59e0b',
+  For:         '#d97706',
+  While:       '#b45309',
+  Call:        '#f43f5e',
+  Return:      '#a78bfa',
+  Raise:       '#fb923c',
+  Import:      '#34d399',
+  ImportFrom:  '#6ee7b7',
+  Try:         '#e879f9',
+  With:        '#c084fc',
+  Expr:        '#64748b',
+  Compare:     '#94a3b8',
+  BinOp:       '#7dd3fc',
+  Name:        '#93c5fd',
+  Constant:    '#86efac',
+  Attribute:   '#fda4af',
+  default:     '#94a3b8'
+};
+
+function getColor(type) {
+  return NODE_COLORS[type] || NODE_COLORS.default;
+}
+
+// Simple Python tokenizer/AST builder
+function parsePythonAST(code) {
+  const lines = code.split('\n');
+  const nodes = [];
+  const stack = [{ type: 'Module', name: 'Module', children: [], depth: 0, line: 0 }];
+  
+  const patterns = [
+    { re: /^(\s*)class\s+(\w+)/, type: 'ClassDef', name: m => m[2] },
+    { re: /^(\s*)async\s+def\s+(\w+)/, type: 'AsyncFunctionDef', name: m => m[2] },
+    { re: /^(\s*)def\s+(\w+)/, type: 'FunctionDef', name: m => m[2] },
+    { re: /^(\s*)if\s+(.+):/, type: 'If', name: m => 'if ' + m[2].trim().substring(0,20) },
+    { re: /^(\s*)elif\s+(.+):/, type: 'If', name: m => 'elif ' + m[2].trim().substring(0,20) },
+    { re: /^(\s*)for\s+(.+):/, type: 'For', name: m => 'for ' + m[2].trim().substring(0,20) },
+    { re: /^(\s*)while\s+(.+):/, type: 'While', name: m => 'while ' + m[2].trim().substring(0,20) },
+    { re: /^(\s*)try:/, type: 'Try', name: () => 'try' },
+    { re: /^(\s*)with\s+(.+):/, type: 'With', name: m => 'with ' + m[2].trim().substring(0,15) },
+    { re: /^(\s*)return\s*(.*)/, type: 'Return', name: m => 'return ' + (m[2]||'').substring(0,20) },
+    { re: /^(\s*)raise\s+(\w+)/, type: 'Raise', name: m => 'raise ' + m[2] },
+    { re: /^(\s*)import\s+(\S+)/, type: 'Import', name: m => 'import ' + m[2] },
+    { re: /^(\s*)from\s+(\S+)\s+import/, type: 'ImportFrom', name: m => 'from ' + m[2] },
+    { re: /^(\s*)(\w+)\s*=\s*(.+)/, type: 'Assign', name: m => m[2] + ' = ...' },
+    { re: /^(\s*)(\w+)\s*\(/, type: 'Call', name: m => m[2] + '()' },
+  ];
+
+  let idCounter = 0;
+  function makeNode(type, name, depth, line, indent) {
+    return { id: idCounter++, type, name, depth, line, indent, children: [] };
+  }
+
+  const root = makeNode('Module', 'Module', 0, 0, -1);
+  const depthStack = [root];
+
+  lines.forEach((line, lineNum) => {
+    if (!line.trim() || line.trim().startsWith('#')) return;
+    
+    const indent = line.match(/^(\s*)/)[1].length;
+    
+    for (const pat of patterns) {
+      const m = line.match(pat.re);
+      if (m) {
+        const node = makeNode(pat.type, pat.name(m), 0, lineNum + 1, indent);
+        
+        // Find parent by indent
+        while (depthStack.length > 1 && depthStack[depthStack.length-1].indent >= indent) {
+          depthStack.pop();
+        }
+        
+        const parent = depthStack[depthStack.length - 1];
+        node.depth = parent.depth + 1;
+        parent.children.push(node);
+        
+        // Push scope-creating nodes
+        if (['ClassDef','FunctionDef','AsyncFunctionDef','If','For','While','Try','With'].includes(pat.type)) {
+          depthStack.push(node);
+        }
+        break;
+      }
+    }
+  });
+
+  return root;
+}
+
+// ─── Layout: Reingold-Tilford style tree layout ────────────────────────────
+
+const NODE_W = 160;
+const NODE_H = 48;
+const H_GAP = 24;
+const V_GAP = 80;
+
+function layoutTree(root) {
+  const allNodes = [];
+  
+  function assignPositions(node, depth, leftOffset) {
+    allNodes.push(node);
+    node.depth = depth;
+    
+    if (node.children.length === 0) {
+      node.x = leftOffset * (NODE_W + H_GAP);
+      node.subtreeWidth = 1;
+      return 1;
+    }
+    
+    let totalWidth = 0;
+    node.children.forEach(child => {
+      const w = assignPositions(child, depth + 1, leftOffset + totalWidth);
+      totalWidth += w;
+    });
+    
+    // Center parent over children
+    const firstChild = node.children[0];
+    const lastChild = node.children[node.children.length - 1];
+    node.x = (firstChild.x + lastChild.x) / 2;
+    node.subtreeWidth = totalWidth;
+    return totalWidth;
+  }
+  
+  assignPositions(root, 0, 0);
+  
+  allNodes.forEach(n => {
+    n.y = n.depth * (NODE_H + V_GAP) + 40;
+  });
+  
+  return allNodes;
+}
+
+// ─── SVG Renderer ─────────────────────────────────────────────────────────
+
+function renderGraph(root) {
+  const nodes = layoutTree(root);
+  const svg = document.getElementById('ast-svg');
+  
+  if (nodes.length === 0) return;
+  
+  const minX = Math.min(...nodes.map(n => n.x)) - 20;
+  const maxX = Math.max(...nodes.map(n => n.x)) + NODE_W + 20;
+  const maxY = Math.max(...nodes.map(n => n.y)) + NODE_H + 40;
+  
+  const width = Math.max(maxX - minX, 800);
+  const height = maxY;
+  
+  svg.setAttribute('width', width);
+  svg.setAttribute('height', height);
+  svg.setAttribute('viewBox', `${minX} 0 ${width} ${height}`);
+  svg.innerHTML = '';
+
+  // Draw edges first
+  const edgeGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  
+  function drawEdges(node) {
+    node.children.forEach(child => {
+      const x1 = node.x + NODE_W / 2;
+      const y1 = node.y + NODE_H;
+      const x2 = child.x + NODE_W / 2;
+      const y2 = child.y;
+      const mid = (y1 + y2) / 2;
+      
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', `M ${x1} ${y1} C ${x1} ${mid}, ${x2} ${mid}, ${x2} ${y2}`);
+      path.setAttribute('class', 'edge');
+      edgeGroup.appendChild(path);
+      drawEdges(child);
+    });
+  }
+  drawEdges(root);
+  svg.appendChild(edgeGroup);
+
+  // Draw nodes
+  nodes.forEach(node => {
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', 'node-group');
+    g.setAttribute('transform', `translate(${node.x}, ${node.y})`);
+    
+    const color = getColor(node.type);
+    
+    // Background rect
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('width', NODE_W);
+    rect.setAttribute('height', NODE_H);
+    rect.setAttribute('rx', 8);
+    rect.setAttribute('ry', 8);
+    rect.setAttribute('fill', color + '22');
+    rect.setAttribute('stroke', color);
+    rect.setAttribute('stroke-width', '1.5');
+    rect.setAttribute('class', 'node-rect');
+    g.appendChild(rect);
+
+    // Left accent bar
+    const bar = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    bar.setAttribute('width', 4);
+    bar.setAttribute('height', NODE_H);
+    bar.setAttribute('rx', 8);
+    bar.setAttribute('fill', color);
+    g.appendChild(bar);
+
+    // Type label
+    const typeText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    typeText.setAttribute('x', 14);
+    typeText.setAttribute('y', 16);
+    typeText.setAttribute('class', 'node-type');
+    typeText.setAttribute('fill', color);
+    typeText.textContent = node.type;
+    g.appendChild(typeText);
+
+    // Name label
+    const nameText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    nameText.setAttribute('x', 14);
+    nameText.setAttribute('y', 33);
+    nameText.setAttribute('class', 'node-label');
+    const displayName = node.name.length > 18 ? node.name.substring(0,18) + '…' : node.name;
+    nameText.textContent = displayName;
+    g.appendChild(nameText);
+
+    // Line number badge
+    if (node.line > 0) {
+      const badge = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      badge.setAttribute('x', NODE_W - 6);
+      badge.setAttribute('y', 14);
+      badge.setAttribute('text-anchor', 'end');
+      badge.setAttribute('font-size', '9');
+      badge.setAttribute('fill', 'rgba(255,255,255,0.25)');
+      badge.setAttribute('font-family', 'JetBrains Mono');
+      badge.textContent = `L${node.line}`;
+      g.appendChild(badge);
+    }
+
+    svg.appendChild(g);
+  });
+}
+
+// ─── Tree List Renderer ────────────────────────────────────────────────────
+
+function renderTree(node, container) {
+  const div = document.createElement('div');
+  div.className = 'tree-node';
+  
+  const item = document.createElement('div');
+  item.className = 'tree-item';
+  
+  const toggle = document.createElement('span');
+  toggle.className = 'tree-toggle';
+  toggle.textContent = node.children.length ? '▾' : ' ';
+  
+  const badge = document.createElement('span');
+  badge.className = 'type-badge';
+  badge.style.background = getColor(node.type) + '33';
+  badge.style.color = getColor(node.type);
+  badge.style.border = `1px solid ${getColor(node.type)}66`;
+  badge.textContent = node.type;
+  
+  const name = document.createElement('span');
+  name.style.color = '#e2e8f0';
+  name.style.fontSize = '12px';
+  name.textContent = node.name !== node.type ? node.name : '';
+  
+  const line = document.createElement('span');
+  line.style.color = '#475569';
+  line.style.fontSize = '10px';
+  line.style.marginLeft = 'auto';
+  line.textContent = node.line > 0 ? `line ${node.line}` : '';
+  
+  item.appendChild(toggle);
+  item.appendChild(badge);
+  item.appendChild(name);
+  item.appendChild(line);
+  div.appendChild(item);
+  
+  if (node.children.length) {
+    const children = document.createElement('div');
+    children.className = 'tree-children';
+    node.children.forEach(child => renderTree(child, children));
+    div.appendChild(children);
+    
+    let collapsed = false;
+    item.onclick = () => {
+      collapsed = !collapsed;
+      children.style.display = collapsed ? 'none' : '';
+      toggle.textContent = collapsed ? '▸' : '▾';
+    };
+  }
+  
+  container.appendChild(div);
+}
+
+// ─── Stats Counter ─────────────────────────────────────────────────────────
+
+function countNodes(root) {
+  let total = 0, maxDepth = 0, funcs = 0, classes = 0, calls = 0, ifs = 0;
+  
+  function walk(node, depth) {
+    total++;
+    maxDepth = Math.max(maxDepth, depth);
+    if (['FunctionDef','AsyncFunctionDef'].includes(node.type)) funcs++;
+    if (node.type === 'ClassDef') classes++;
+    if (node.type === 'Call') calls++;
+    if (node.type === 'If') ifs++;
+    node.children.forEach(c => walk(c, depth + 1));
+  }
+  walk(root, 0);
+  return { total, maxDepth, funcs, classes, calls, ifs };
+}
+
+// ─── Main Parse Function ───────────────────────────────────────────────────
+
+function parseCode() {
+  const code = document.getElementById('code-input').value;
+  if (!code.trim()) return;
+  
+  const root = parsePythonAST(code);
+  const stats = countNodes(root);
+  
+  // Update stats
+  document.getElementById('stat-nodes').textContent = stats.total;
+  document.getElementById('stat-depth').textContent = stats.maxDepth;
+  document.getElementById('stat-funcs').textContent = stats.funcs;
+  document.getElementById('stat-classes').textContent = stats.classes;
+  document.getElementById('stat-calls').textContent = stats.calls;
+  document.getElementById('stat-ifs').textContent = stats.ifs;
+  
+  document.getElementById('stats-bar').style.display = 'flex';
+  document.getElementById('legend').style.display = 'flex';
+  document.getElementById('empty-graph').style.display = 'none';
+  document.getElementById('empty-tree').style.display = 'none';
+  
+  // Render graph
+  renderGraph(root);
+  
+  // Render tree
+  const treeRoot = document.getElementById('tree-root');
+  treeRoot.innerHTML = '';
+  renderTree(root, treeRoot);
+}
+
+// ─── Tab Switching ─────────────────────────────────────────────────────────
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', ['graph','tree'][i] === name);
+  });
+  document.querySelectorAll('.tab-content').forEach((c, i) => {
+    c.classList.toggle('active', ['tab-graph','tab-tree'][i] === 'tab-' + name);
+  });
+}
+
+// ─── Line counter ──────────────────────────────────────────────────────────
+
+document.getElementById('code-input').addEventListener('input', function() {
+  const lines = this.value.split('\n').length;
+  document.getElementById('line-count').textContent = lines + ' lines';
+});
+
+// ─── Default sample code ───────────────────────────────────────────────────
+
+document.getElementById('code-input').value = `class BankAccount:
+    def __init__(self, owner: str, balance: float = 0.0):
+        self.owner = owner
+        self.balance = balance
+        self.transactions = []
+
+    def deposit(self, amount: float) -> float:
+        if amount <= 0:
+            raise ValueError("Deposit amount must be positive")
+        self.balance += amount
+        self.transactions.append(("deposit", amount))
+        return self.balance
+
+    def withdraw(self, amount: float) -> float:
+        if amount <= 0:
+            raise ValueError("Withdrawal amount must be positive")
+        if amount > self.balance:
+            raise ValueError("Insufficient funds")
+        self.balance -= amount
+        self.transactions.append(("withdraw", amount))
+        return self.balance
+
+    def get_summary(self) -> dict:
+        return {
+            "owner": self.owner,
+            "balance": self.balance,
+            "total_transactions": len(self.transactions)
+        }
+
+
+def process_accounts(accounts: list) -> list:
+    summaries = []
+    for account in accounts:
+        if account.balance > 1000:
+            account.deposit(account.balance * 0.05)
+        summaries.append(account.get_summary())
+    return summaries
+
+
+if __name__ == "__main__":
+    acc1 = BankAccount("Alice", 1500.0)
+    acc2 = BankAccount("Bob", 500.0)
+    acc1.withdraw(200)
+    acc2.deposit(800)
+    results = process_accounts([acc1, acc2])`;
+
+document.getElementById('line-count').textContent = 
+  document.getElementById('code-input').value.split('\n').length + ' lines';
+
+// Auto-parse on load
+parseCode();
+</script>
+</body>
+</html>

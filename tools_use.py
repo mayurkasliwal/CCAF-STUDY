@@ -1,10 +1,7 @@
-import openai
+import anthropic
 from datetime import datetime
 
-client = openai.OpenAI(
-    api_key="your-github-models-api-key-here",  # Replace with your GitHub Models API key
-    base_url="https://models.inference.ai.azure.com/"
-)
+client = anthropic.Anthropic()
 
 # ══════════════════════════════════════════════════════
 # FAKE DATABASE — simulates real data in your system
@@ -37,93 +34,81 @@ upi_limits = {
 
 
 # ══════════════════════════════════════════════════════
-# TOOL DEFINITIONS — what Gemini knows about your tools
+# TOOL DEFINITIONS — what Claude knows about your tools
 # ══════════════════════════════════════════════════════
 
 tools = [
     {
-        "type": "function",
-        "function": {
-            "name": "get_account_balance",
-            "description": "Gets current account balance and account holder name. Use this when user asks about their balance, account info, or how much money they have.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "account_id": {
-                        "type": "string",
-                        "description": "The account ID e.g. ACC001"
-                    }
-                },
-                "required": ["account_id"]
-            }
+        "name": "get_account_balance",
+        "description": "Gets current account balance and account holder name. Use this when user asks about their balance, account info, or how much money they have.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "account_id": {
+                    "type": "string",
+                    "description": "The account ID e.g. ACC001"
+                }
+            },
+            "required": ["account_id"]
         }
     },
     {
-        "type": "function",
-        "function": {
-            "name": "get_recent_transactions",
-            "description": "Gets list of recent transactions for an account. Use when user asks about spending, recent activity, or transaction history.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "account_id": {
-                        "type": "string",
-                        "description": "The account ID"
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "description": "Number of recent transactions to fetch. Default 5.",
-                        "default": 5
-                    }
+        "name": "get_recent_transactions",
+        "description": "Gets list of recent transactions for an account. Use when user asks about spending, recent activity, or transaction history.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "account_id": {
+                    "type": "string",
+                    "description": "The account ID"
                 },
-                "required": ["account_id"]
-            }
+                "limit": {
+                    "type": "integer",
+                    "description": "Number of recent transactions to fetch. Default 5.",
+                    "default": 5
+                }
+            },
+            "required": ["account_id"]
         }
     },
     {
-        "type": "function",
-        "function": {
-            "name": "transfer_money",
-            "description": "Transfers money from one account to another. Use ONLY when user explicitly asks to send or transfer money. Always confirm amount and destination before calling.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "from_account": {
-                        "type": "string",
-                        "description": "Source account ID"
-                    },
-                    "to_account": {
-                        "type": "string",
-                        "description": "Destination account ID"
-                    },
-                    "amount": {
-                        "type": "number",
-                        "description": "Amount to transfer in INR"
-                    },
-                    "note": {
-                        "type": "string",
-                        "description": "Payment note or description"
-                    }
+        "name": "transfer_money",
+        "description": "Transfers money from one account to another. Use ONLY when user explicitly asks to send or transfer money. Always confirm amount and destination before calling.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "from_account": {
+                    "type": "string",
+                    "description": "Source account ID"
                 },
-                "required": ["from_account", "to_account", "amount"]
-            }
+                "to_account": {
+                    "type": "string",
+                    "description": "Destination account ID"
+                },
+                "amount": {
+                    "type": "number",
+                    "description": "Amount to transfer in INR"
+                },
+                "note": {
+                    "type": "string",
+                    "description": "Payment note or description"
+                }
+            },
+            "required": ["from_account", "to_account", "amount"]
         }
     },
     {
-        "type": "function",
-        "function": {
-            "name": "check_upi_limit",
-            "description": "Checks remaining UPI transfer limit for today. Use this before processing a transfer to ensure the limit is not exceeded.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "account_id": {
-                        "type": "string",
-                        "description": "The account ID to check limits for"
-                    }
-                },
-                "required": ["account_id"]
-            }
+        "name": "check_upi_limit",
+        "description": "Checks remaining UPI transfer limit for today. Use this before processing a transfer to ensure the limit is not exceeded.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "account_id": {
+                    "type": "string",
+                    "description": "The account ID to check limits for"
+                }
+            },
+            "required": ["account_id"]
         }
     }
 ]

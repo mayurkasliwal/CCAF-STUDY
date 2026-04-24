@@ -1,0 +1,14 @@
+{
+  "documents": [
+    {
+      "id": "doc-01",
+      "title": "Apollo 11",
+      "text": "Apollo 11 was the American spaceflight that first landed humans on the Moon. Commander Neil Armstrong and lunar module pilot Buzz Aldrin landed on July 20, 1969. Michael Collins flew the command module Columbia. Apollo 11 was launched by NASA using a Saturn V rocket from Kennedy Space Center. The lunar module was named Eagle."
+    },
+    {
+      "id": "doc-02",
+      "title": "Neil Armstrong",
+      "text": "Neil Armstrong was an American astronaut and the first person to walk on the Moon. He commanded Apollo 11 and previously flew on Gemini 8. Armstrong served in the United States Navy and studied at Purdue University. He worked for NASA and flew combat missions during the Korean War."
+    }
+  ]
+}
